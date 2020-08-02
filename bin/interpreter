@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require 'cbfc'
+
+parsed = begin
+           Cbfc::Parser.new.parse(File.read(ARGV[0]))
+         rescue Parslet::ParseFailed => e
+           puts e.parse_failure_cause.ascii_tree
+         end
+ast = Cbfc::Transformer.new.apply(parsed)
+interpreter = Cbfc::Interpreter.new(ast)
+
+interpreter.eval
