@@ -12,3 +12,9 @@
 
 # ignore generated parser table
 bf.tbl
+
+# ignore brainfuck files and interims
+*.bf
+*.ll
+*.bc
+*.o
