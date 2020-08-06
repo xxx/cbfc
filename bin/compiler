@@ -1,0 +1,78 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require 'cbfc'
+require 'open3'
+require 'securerandom'
+
+def determine_triple
+  triple_checks = [
+    '/usr/bin/env gcc -dumpmachine',
+    '/usr/bin/env llvm-config --host-target'
+  ]
+
+  triple = ''
+  triple_checks.each do |check|
+    triple = `#{check}`.chomp.sub('pc-linux', 'linux')
+  end
+
+  triple
+end
+
+def emit_object_file(filename, stdin, args = '')
+  Open3.capture2(
+    "/usr/bin/env llc - -filetype=obj #{args} --relocation-model=pic -o #{filename}",
+    stdin_data: stdin
+  )
+end
+
+if ARGV.length < 2
+  warn 'Usage: ./compiler <infile> <outfile>'
+  warn 'Output filename determines format:'
+  warn '  end with .ll - file emitted as LLVM IR'
+  warn '  end with .bc - file emitted as LLVM bitcode'
+  warn '  end with .o - file emitted as an object file'
+  warn '  "-" - emits LLVM IR to stdout'
+  warn '  anything else - emits an executable with that name'
+  exit 1
+end
+
+triple = determine_triple
+
+if triple.length.zero?
+  warn 'Unable to determine target triple of this environment. Cannot continue.'
+  exit 1
+end
+
+parsed = Cbfc::Parser.parse_file(ARGV[0])
+ast = Cbfc::Transformer.new.apply(parsed)
+compiler = Cbfc::CodeGen.new(ast, target_triple: triple)
+
+compiler.compile
+
+case ARGV[1]
+when /\.ll\z/
+  compiler.to_file(ARGV[1])
+  puts "LLVM IR emitted to #{ARGV[1]}"
+when /\.bc\z/
+  compiler.to_bitcode(ARGV[1])
+  puts "LLVM bitcode emitted to #{ARGV[1]}"
+when /\.o\z/
+  emit_object_file(ARGV[1], compiler.to_s)
+  puts "Object file emitted to #{ARGV[1]}"
+when '-'
+  puts compiler.to_s
+else
+  # llc hw.ll -filetype=obj --relocation-model=pic -o hw.o                                                                                                                                                ✘ 1 master ✚ ✱ ◼
+  # gcc hw.o -o hw
+  tmpfile = SecureRandom.uuid
+  begin
+    emit_object_file(tmpfile, compiler.to_s, '-O3')
+    `/usr/bin/env gcc #{tmpfile} -o #{ARGV[1]}`
+  ensure
+    File.unlink(tmpfile)
+  end
+  puts "Executable file emitted to #{ARGV[1]}"
+end
+

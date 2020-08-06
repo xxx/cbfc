@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
 RSpec.describe Cbfc do
-  it 'has a version number' do
-    expect(Cbfc::VERSION).not_to be nil
-  end
+  it 'parses simple programs' do
+    hello_world = <<~BF
+      ++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.
+    BF
 
-  it 'does something useful' do
-    expect(false).to eq(true)
+    expect do
+      parsed = Cbfc::Parser.new.parse(hello_world)
+      ast = Cbfc::Transformer.new.apply(parsed)
+      Cbfc::CodeGen.new(ast).compile
+    end.not_to raise_error
   end
 end

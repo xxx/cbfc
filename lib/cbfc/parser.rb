@@ -21,5 +21,11 @@ module Cbfc
     rule(:program) { junk? >> statement.repeat.as(:program) }
 
     root :program
+
+    def self.parse_file(path)
+      new.parse(File.read(path))
+    rescue Parslet::ParseFailed => e
+      warn e.parse_failure_cause.ascii_tree
+    end
   end
 end
