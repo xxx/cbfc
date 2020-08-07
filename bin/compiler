@@ -20,9 +20,9 @@ def determine_triple
   triple
 end
 
-def emit_object_file(filename, stdin, args = '')
+def emit_llc_output(filename, stdin, filetype, args = '')
   Open3.capture2(
-    "/usr/bin/env llc - -filetype=obj #{args} --relocation-model=pic -o #{filename}",
+    "/usr/bin/env llc - -filetype=#{filetype} #{args} --relocation-model=pic -o #{filename}",
     stdin_data: stdin
   )
 end
@@ -32,6 +32,7 @@ if ARGV.length < 2
   warn 'Output filename determines format:'
   warn '  end with .ll - file emitted as LLVM IR'
   warn '  end with .bc - file emitted as LLVM bitcode'
+  warn '  end with .s - file emitted as assembly language for the target machine'
   warn '  end with .o - file emitted as an object file'
   warn '  "-" - emits LLVM IR to stdout'
   warn '  anything else - emits an executable with that name'
@@ -58,17 +59,18 @@ when /\.ll\z/
 when /\.bc\z/
   compiler.to_bitcode(ARGV[1])
   puts "LLVM bitcode emitted to #{ARGV[1]}"
+when /\.s\z/
+  emit_llc_output(ARGV[1], compiler.to_s, 'asm', '-O3')
+  puts "Assembly code emitted to #{ARGV[1]}"
 when /\.o\z/
-  emit_object_file(ARGV[1], compiler.to_s)
+  emit_llc_output(ARGV[1], compiler.to_s, 'obj')
   puts "Object file emitted to #{ARGV[1]}"
 when '-'
   puts compiler.to_s
 else
-  # llc hw.ll -filetype=obj --relocation-model=pic -o hw.o                                                                                                                                                ✘ 1 master ✚ ✱ ◼
-  # gcc hw.o -o hw
   tmpfile = SecureRandom.uuid
   begin
-    emit_object_file(tmpfile, compiler.to_s, '-O3')
+    emit_llc_output(tmpfile, compiler.to_s, 'obj', '-O3')
     `/usr/bin/env gcc #{tmpfile} -o #{ARGV[1]}`
   ensure
     File.unlink(tmpfile)
