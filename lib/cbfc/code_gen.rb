@@ -63,10 +63,18 @@ module Cbfc
       File.write(path, to_s)
     end
 
+    def interpret_jit
+      LLVM.init_jit
+
+      engine = LLVM::JITCompiler.new(@module)
+      engine.run_function(@main)
+      engine.dispose
+    end
+
     private
 
     def program(node, _builder = nil, _function = nil)
-      @module.functions.add('main', [], LLVM::Int) do |function|
+      @main = @module.functions.add('main', [], LLVM::Int) do |function|
         entry = function.basic_blocks.append('entry')
 
         entry.build do |b|

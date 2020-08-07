@@ -4,8 +4,9 @@
 require 'bundler/setup'
 require 'cbfc'
 
-# Interpret a file through the local pure-Ruby interpreter
+# Interpret a file via LLVM's JIT-enabled interpreter.
 parsed = Cbfc::Parser.parse_file(ARGV[0])
 ast = Cbfc::Transformer.new.apply(parsed)
-interpreter = Cbfc::Interpreter.new(ast)
-interpreter.eval
+compiler = Cbfc::CodeGen.new(ast)
+compiler.compile
+compiler.interpret_jit

@@ -6,6 +6,10 @@ require 'cbfc'
 require 'open3'
 require 'securerandom'
 
+# Transform an input file into various kinds of output files.
+# Assumes a UNIX-like environment.
+# This thing will not work on all systems, especially finding the target triple.
+
 def determine_triple
   triple_checks = [
     '/usr/bin/env gcc -dumpmachine',
