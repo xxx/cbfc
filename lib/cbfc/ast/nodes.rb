@@ -2,6 +2,12 @@
 
 module Cbfc
   class BfNode < Object; end
+  class CountNode < BfNode
+    attr_reader :count
+    def initialize(count)
+      @count = count
+    end
+  end
 
   module Ast
     class Program < BfNode
@@ -16,12 +22,14 @@ module Cbfc
       end
     end
 
-    class IncPtr < BfNode; end
-    class DecPtr < BfNode; end
-    class IncVal < BfNode; end
-    class DecVal < BfNode; end
+    class IncPtr < CountNode; end
+    class DecPtr < CountNode; end
+    class IncVal < CountNode; end
+    class DecVal < CountNode; end
     class WriteByte < BfNode; end
     class ReadByte < BfNode; end
+
+    class ZeroCell < BfNode; end
 
     class Loop < BfNode
       attr_reader :ops

@@ -18,6 +18,7 @@ module Cbfc
       Ast::DecVal => :dec_val,
       Ast::WriteByte => :write_byte,
       Ast::ReadByte => :read_byte,
+      Ast::ZeroCell => :zero_cell,
       Ast::Loop => :do_loop
     }.freeze
 
@@ -87,24 +88,24 @@ module Cbfc
       end
     end
 
-    def inc_ptr(_node, b, _function)
-      b.store b.add(b.load(@ptr, 'inc_ptr_load'), LLVM::Int(1), 'inc_ptr_add'), @ptr
+    def inc_ptr(node, b, _function)
+      b.store b.add(b.load(@ptr, 'inc_ptr_load'), LLVM::Int(node.count), 'inc_ptr_add'), @ptr
     end
 
-    def dec_ptr(_node, b, _function)
-      b.store b.sub(b.load(@ptr, 'dec_ptr_load'), LLVM::Int(1), 'dec_ptr_sub'), @ptr
+    def dec_ptr(node, b, _function)
+      b.store b.sub(b.load(@ptr, 'dec_ptr_load'), LLVM::Int(node.count), 'dec_ptr_sub'), @ptr
     end
 
-    def inc_val(_node, b, _function)
+    def inc_val(node, b, _function)
       addr = current_cell(b)
       value = b.load addr, 'inc_val_load'
-      b.store b.add(value, LLVM::Int(1), 'inc_val_add'), addr
+      b.store b.add(value, LLVM::Int(node.count), 'inc_val_add'), addr
     end
 
-    def dec_val(_node, b, _function)
+    def dec_val(node, b, _function)
       addr = current_cell(b)
       value = b.load addr, 'dec_val_load'
-      b.store b.sub(value, LLVM::Int(1), 'dec_val_sub'), addr
+      b.store b.sub(value, LLVM::Int(node.count), 'dec_val_sub'), addr
     end
 
     def write_byte(_node, b, _function)
@@ -114,6 +115,10 @@ module Cbfc
 
     def read_byte(_node, b, _function)
       b.store b.call(@getchar), current_cell(b)
+    end
+
+    def zero_cell(_node, b, _function)
+      b.store ZERO, current_cell(b)
     end
 
     def do_loop(node, b, function)

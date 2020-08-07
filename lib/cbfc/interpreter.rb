@@ -12,6 +12,7 @@ module Cbfc
       Ast::DecVal => :dec_val,
       Ast::WriteByte => :write_byte,
       Ast::ReadByte => :read_byte,
+      Ast::ZeroCell => :zero_cell,
       Ast::Loop => :do_loop
     }.freeze
 
@@ -30,20 +31,22 @@ module Cbfc
       node.ops.each { |op| eval(op) } # rubocop:disable Security/Eval
     end
 
-    def inc_ptr(_)
-      @ptr = (@ptr == (DATA_SIZE - 1) ? 0 : (@ptr + 1))
+    def inc_ptr(node)
+      @ptr += node.count
+      @ptr -= DATA_SIZE while @ptr >= DATA_SIZE
     end
 
-    def dec_ptr(_)
-      @ptr = (@ptr.zero? ? (DATA_SIZE - 1) : (@ptr - 1))
+    def dec_ptr(node)
+      @ptr -= node.count
+      @ptr += DATA_SIZE while @ptr.negative?
     end
 
-    def inc_val(_)
-      @memory[@ptr] += 1
+    def inc_val(node)
+      @memory[@ptr] += node.count
     end
 
-    def dec_val(_)
-      @memory[@ptr] -= 1
+    def dec_val(node)
+      @memory[@ptr] -= node.count
     end
 
     def write_byte(_)
@@ -52,6 +55,10 @@ module Cbfc
 
     def read_byte(_)
       @memory[@ptr] = $stdin.getc.ord
+    end
+
+    def zero_cell(_)
+      @memory[@ptr] = 0
     end
 
     def do_loop(node)
