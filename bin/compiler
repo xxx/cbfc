@@ -5,6 +5,7 @@ require 'bundler/setup'
 require 'cbfc'
 require 'open3'
 require 'securerandom'
+require 'tempfile'
 
 # Transform an input file into various kinds of output files.
 # Assumes a UNIX-like environment.
@@ -72,12 +73,12 @@ when /\.o\z/
 when '-'
   puts compiler.to_s
 else
-  tmpfile = SecureRandom.uuid
+  tmpfile = Tempfile.new('brainfuck-object')
   begin
-    emit_llc_output(tmpfile, compiler.to_s, 'obj', '-O3')
-    `/usr/bin/env gcc #{tmpfile} -o #{ARGV[1]}`
+    emit_llc_output(tmpfile.path, compiler.to_s, 'obj', '-O3')
+    `/usr/bin/env gcc #{tmpfile.path} -o #{ARGV[1]}`
   ensure
-    File.unlink(tmpfile)
+    tmpfile.unlink
   end
   puts "Executable file emitted to #{ARGV[1]}"
 end
