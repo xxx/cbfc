@@ -2,6 +2,10 @@
 
 ##### A crappy brainfuck compiler and interpreter to get some experience targeting LLVM.
 
+Some differences from the standard - cell sizes are native int size, and currently with the
+compiler pointer does not wrap around memory when incremented or decremented beyond one
+of the ends.
+
 ## Installation
 
 **Note** This gem requires LLVM version 10 to be installed. If the gem and its dependencies
