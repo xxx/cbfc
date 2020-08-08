@@ -18,6 +18,7 @@ module Cbfc
       Ast::DecVal => :dec_val,
       Ast::WriteByte => :write_byte,
       Ast::ReadByte => :read_byte,
+      Ast::CopyLoop => :copy_loop,
       Ast::ZeroCell => :zero_cell,
       Ast::Loop => :do_loop
     }.freeze
@@ -30,6 +31,7 @@ module Cbfc
       @module = LLVM::Module.new('cbf')
 
       @module.triple = target_triple
+      @cell_count = cell_count
 
       @putchar = @module.functions.add('putchar', [LLVM::Int], LLVM::Int) do |function, _int|
         function.add_attribute :no_unwind_attribute
@@ -63,9 +65,9 @@ module Cbfc
       end
     end
 
-    def compile(node = @ast, builder = nil, function = nil)
+    def compile(node = @ast, builder = nil)
       method = DISPATCH_TABLE.fetch(node.class)
-      send(method, node, builder, function)
+      send(method, node, builder)
       self
     end
 
@@ -87,45 +89,46 @@ module Cbfc
 
     private
 
-    def program(node, _builder = nil, _function = nil)
+    def program(node, _builder = nil)
       @main = @module.functions.add('main', [], LLVM::Int) do |function|
+        @current_function = function
         entry = function.basic_blocks.append('entry')
 
         entry.build do |b|
           b.store NATIVE_ZERO, @ptr
 
-          node.ops.each { |op_node| compile(op_node, b, function) }
+          node.ops.each { |op_node| compile(op_node, b) }
 
           b.ret NATIVE_ZERO
         end
       end
     end
 
-    def inc_ptr(node, b, _function)
-      b.store b.add(b.load(@ptr, 'inc_ptr_load'), LLVM::Int(node.count), 'inc_ptr_add'), @ptr
+    def inc_ptr(node, b)
+      b.store offset_ptr(b, offset: node.count), @ptr
     end
 
-    def dec_ptr(node, b, _function)
-      b.store b.sub(b.load(@ptr, 'dec_ptr_load'), LLVM::Int(node.count), 'dec_ptr_sub'), @ptr
+    def dec_ptr(node, b)
+      b.store offset_ptr(b, offset: -node.count), @ptr
     end
 
-    def inc_val(node, b, _function)
+    def inc_val(node, b)
       addr = current_cell(b)
       value = b.load addr, 'inc_val_load'
       b.store b.add(value, @int_type.from_i(node.count), 'inc_val_add'), addr
     end
 
-    def dec_val(node, b, _function)
+    def dec_val(node, b)
       addr = current_cell(b)
       value = b.load addr, 'dec_val_load'
       b.store b.sub(value, @int_type.from_i(node.count), 'dec_val_sub'), addr
     end
 
-    def write_byte(_node, b, _function)
+    def write_byte(_node, b)
       value = b.load current_cell(b), 'write_byte_load'
 
       if @cell_width < NATIVE_BITS
-        value = b.zext(value, LLVM::Int)
+        value = b.sext(value, LLVM::Int)
       elsif @cell_width > NATIVE_BITS
         value = b.trunc(value, LLVM::Int)
       end
@@ -133,26 +136,38 @@ module Cbfc
       b.call @putchar, value
     end
 
-    def read_byte(_node, b, _function)
+    def read_byte(_node, b)
       value = b.call(@getchar)
 
       if @cell_width < NATIVE_BITS
         value = b.trunc(value, @int_type)
       elsif @cell_width > NATIVE_BITS
-        value = b.zext(value, @int_type)
+        value = b.sext(value, @int_type)
       end
 
       b.store value, current_cell(b)
     end
 
-    def zero_cell(_node, b, _function)
+    def copy_loop(node, b)
+      current_value = b.load current_cell(b), 'copy_loop_ptr_load'
+
+      node.offsets.each do |offset|
+        offset_addr = current_cell(b, offset: offset)
+        offset_value = b.load offset_addr, 'copy_loop_cell_load'
+        b.store b.add(offset_value, current_value, 'copy_loop_cell_add'), offset_addr
+      end
+
       b.store @width_zero, current_cell(b)
     end
 
-    def do_loop(node, b, function)
-      loop_head = function.basic_blocks.append('loop_head')
-      loop_body = function.basic_blocks.append('loop_body')
-      loop_end = function.basic_blocks.append('loop_end')
+    def zero_cell(_node, b)
+      b.store @width_zero, current_cell(b)
+    end
+
+    def do_loop(node, b)
+      loop_head = @current_function.basic_blocks.append('loop_head')
+      loop_body = @current_function.basic_blocks.append('loop_body')
+      loop_end = @current_function.basic_blocks.append('loop_end')
 
       b.br loop_head
 
@@ -165,7 +180,7 @@ module Cbfc
       end
 
       loop_body.build do |builder|
-        node.ops.each { |op_node| compile(op_node, builder, function) }
+        node.ops.each { |op_node| compile(op_node, builder) }
 
         builder.br loop_head
       end
@@ -173,10 +188,61 @@ module Cbfc
       b.position_at_end(loop_end)
     end
 
-    def current_cell(b, offset: 0)
-      value = offset.positive? ? b.add(@ptr, LLVM::Int(offset)) : @ptr
+    def offset_ptr(b, offset: 0)
+      current = b.load(@ptr, 'offset_ptr_load')
+      return current if offset.zero?
 
-      b.gep(@memory, [LLVM::Int(0), b.load(value, 'current_cell_ptr')], 'current_cell')
+      # handle memory wrapping
+      if_greater_body = @current_function.basic_blocks.append('if_greater_body')
+      if_less_head = @current_function.basic_blocks.append('if_less_head')
+      if_less_body = @current_function.basic_blocks.append('if_less_body')
+      if_end = @current_function.basic_blocks.append('if_end')
+
+      current = b.add(current, LLVM::Int(offset), 'offset_ptr_add')
+      if_greater = b.icmp :sge,
+                          current,
+                          LLVM::Int(@cell_count),
+                          'offset_ptr_sge'
+      b.cond if_greater, if_greater_body, if_less_head
+
+      sub = nil
+      add = nil
+      if_greater_body.build do |builder|
+        sub = builder.sub current, LLVM::Int(@cell_count)
+        builder.br if_end
+      end
+
+      if_less_head.build do |builder|
+        if_less = builder.icmp :slt,
+                               current,
+                               NATIVE_ZERO,
+                               'offset_ptr_slt'
+        builder.cond if_less, if_less_body, if_end
+      end
+
+      if_less_body.build do |builder|
+        add = builder.add current, LLVM::Int(@cell_count)
+        builder.br if_end
+      end
+
+      result = nil
+      if_end.build do |builder|
+        result = builder.phi(
+          LLVM::Int,
+          { if_greater_body => sub, if_less_body => add, if_less_head => current },
+          'offset_ptr_phi'
+        )
+      end
+
+      b.position_at_end(if_end)
+
+      result
+    end
+
+    def current_cell(b, offset: 0)
+      current_index = offset_ptr(b, offset: offset)
+
+      b.gep(@memory, [LLVM::Int(0), current_index], 'current_cell')
     end
   end
 end

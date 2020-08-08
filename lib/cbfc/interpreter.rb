@@ -12,6 +12,7 @@ module Cbfc
       Ast::DecVal => :dec_val,
       Ast::WriteByte => :write_byte,
       Ast::ReadByte => :read_byte,
+      Ast::CopyLoop => :copy_loop,
       Ast::ZeroCell => :zero_cell,
       Ast::Loop => :do_loop
     }.freeze
@@ -56,6 +57,14 @@ module Cbfc
 
     def read_byte(_)
       @memory[@ptr] = $stdin.getc.ord
+    end
+
+    def copy_loop(node)
+      node.offsets.each do |offset|
+        @memory[@ptr + offset] += @memory[@ptr]
+      end
+
+      @memory[@ptr] = 0
     end
 
     def zero_cell(_)

@@ -3,8 +3,9 @@
 ##### A crappy brainfuck compiler and interpreter to get some experience targeting LLVM.
 
 Some differences from the standard - cell widths default to native int size
-(but are configurable), and currently with the compiler pointer does not wrap
-around memory when incremented or decremented beyond one of the ends.
+(but are configurable) for the compiler, and the Ruby interpreter uses BigInts.
+
+This incorporates some optimizations suggested at http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html. 
 
 ## Installation
 

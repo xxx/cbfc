@@ -39,6 +39,8 @@ if ARGV.length < 2
   warn '  end with .bc - file emitted as LLVM bitcode'
   warn '  end with .s - file emitted as assembly language for the target machine'
   warn '  end with .o - file emitted as an object file'
+  warn '  "parse" - emit the parse tree to stdout'
+  warn '  "ast" - emit the AST to stdout'
   warn '  "-" - emits LLVM IR to stdout'
   warn '  anything else - emits an executable with that name'
   exit 1
@@ -52,9 +54,18 @@ if triple.length.zero?
 end
 
 parsed = Cbfc::Parser.parse_file(ARGV[0])
-ast = Cbfc::Transformer.new.apply(parsed)
-compiler = Cbfc::CodeGen.new(ast, target_triple: triple)
+if ARGV[1] == 'parse'
+  pp parsed
+  exit 0
+end
 
+ast = Cbfc::Transformer.new.apply(parsed)
+if ARGV[1] == 'ast'
+  pp ast
+  exit 0
+end
+
+compiler = Cbfc::CodeGen.new(ast, target_triple: triple)
 compiler.compile
 
 case ARGV[1]
@@ -75,7 +86,7 @@ when '-'
 else
   tmpfile = Tempfile.new('brainfuck-object')
   begin
-    emit_llc_output(tmpfile.path, compiler.to_s, 'obj', '-O3')
+    emit_llc_output(tmpfile.path, compiler.to_s, 'obj', '-O0')
     `/usr/bin/env gcc #{tmpfile.path} -o #{ARGV[1]}`
   ensure
     tmpfile.unlink

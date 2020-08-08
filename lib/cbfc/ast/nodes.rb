@@ -29,6 +29,27 @@ module Cbfc
     class WriteByte < BfNode; end
     class ReadByte < BfNode; end
 
+    class CopyLoop < BfNode
+      attr_reader :offsets
+
+      def initialize(ops)
+        @ops = ops
+        @offsets = []
+        counter = 0
+
+        ops.to_s.each_char do |op|
+          case op
+          when '>'
+            counter += 1
+          when '<'
+            counter -= 1
+          when '+'
+            @offsets << counter
+          end
+        end
+      end
+    end
+
     class ZeroCell < BfNode; end
 
     class Loop < BfNode

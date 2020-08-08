@@ -14,10 +14,35 @@ module Cbfc
     rule(:junk) { match('[^><+\.,\[\]-]').repeat(1) }
     rule(:junk?) { junk.maybe }
 
+    # handle copying bytes in front of the pointer
+    rule(:copy_core) { str('>') >> junk? >> str('+') >> junk? >> str('<') }
+    rule(:copy_body) { str('>') >> junk? >> str('+').maybe >> copy_body >> junk? >> str('<') | copy_core }
+    rule(:copy_loop) { loop_start >> junk? >> str('-') >> junk? >> copy_body.as(:copy_loop) >> loop_end }
+
+    # handle copying bytes behind the pointer
+    rule(:negative_copy_core) { str('<') >> junk? >> str('+') >> junk? >> str('>') }
+    rule(:negative_copy_body) do
+      str('<') >> junk? >> str('+').maybe >> negative_copy_body >> junk? >> str('>') | negative_copy_core
+    end
+    rule(:negative_copy_loop) do
+      loop_start >> junk? >> str('-') >> junk? >> negative_copy_body.as(:negative_copy_loop) >> loop_end
+    end
+
     rule(:zero_cell) { loop_start >> junk? >> match('[+-]').as(:zero_cell) >> junk? >> loop_end }
     rule(:loop_statement) { loop_start >> junk? >> statement.repeat.as(:loop) >> loop_end }
     rule(:statement) do
-      (inc_ptr | dec_ptr | inc_val | dec_val | write_byte | read_byte | zero_cell | loop_statement) >> junk?
+      (
+        inc_ptr |
+        dec_ptr |
+        inc_val |
+        dec_val |
+        write_byte |
+        read_byte |
+        zero_cell |
+        copy_loop |
+        negative_copy_loop |
+        loop_statement
+      ) >> junk?
     end
     rule(:program) { junk? >> statement.repeat.as(:program) }
 
