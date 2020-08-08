@@ -8,13 +8,13 @@ module Cbfc
     rule(:dec_val) { (str('-').as(:op) >> (str('-').as(:op) | junk).repeat(0)).as(:dec_val) }
     rule(:write_byte) { str('.').as(:write_byte) }
     rule(:read_byte) { str(',').as(:read_byte) }
-    rule(:loop_start) { str('[').as(:loop_start) }
-    rule(:loop_end) { str(']').as(:loop_end) }
+    rule(:loop_start) { str('[') }
+    rule(:loop_end) { str(']') }
 
     rule(:junk) { match('[^><+\.,\[\]-]').repeat(1) }
     rule(:junk?) { junk.maybe }
 
-    rule(:zero_cell) { loop_start >> junk? >> str('-').as(:loop) >> loop_end }
+    rule(:zero_cell) { loop_start >> junk? >> match('[+-]').as(:zero_cell) >> junk? >> loop_end }
     rule(:loop_statement) { loop_start >> junk? >> statement.repeat.as(:loop) >> loop_end }
     rule(:statement) do
       (inc_ptr | dec_ptr | inc_val | dec_val | write_byte | read_byte | zero_cell | loop_statement) >> junk?

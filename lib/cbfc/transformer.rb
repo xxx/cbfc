@@ -9,17 +9,9 @@ module Cbfc
     rule(write_byte: '.') { Ast::WriteByte.new }
     rule(read_byte: ',') { Ast::ReadByte.new }
 
-    rule(
-      loop_start: '[',
-      loop: '-',
-      loop_end: ']'
-    ) { Ast::ZeroCell.new }
+    rule(zero_cell: simple(:op)) { Ast::ZeroCell.new }
 
-    rule(
-      loop_start: '[',
-      loop: sequence(:loop_ops),
-      loop_end: ']'
-    ) { Ast::Loop.new(loop_ops) }
+    rule(loop: sequence(:loop_ops)) { Ast::Loop.new(loop_ops) }
 
     rule(program: sequence(:ops)) { Ast::Program.new(ops) }
   end
