@@ -44,13 +44,15 @@ module Cbfc
         var.linkage = :internal
       end
 
-      @cell_width = cell_width
-      @int_type = case cell_width
-                  when 8, 16, 32, 64, 128
-                    Object.const_get("LLVM::Int#{cell_width}")
-                  else
-                    LLVM::Int # default to native
-                  end
+      case cell_width
+      when 8, 16, 32, 64, 128
+        @cell_width = cell_width
+        @int_type = Object.const_get("LLVM::Int#{cell_width}")
+      else
+        # default to native
+        @cell_width = NATIVE_BITS
+        @int_type = LLVM::Int
+      end
 
       @width_zero = @int_type.from_i(0)
 
@@ -171,8 +173,10 @@ module Cbfc
       b.position_at_end(loop_end)
     end
 
-    def current_cell(b)
-      b.gep(@memory, [LLVM::Int(0), b.load(@ptr, 'current_cell_ptr')], 'current_cell')
+    def current_cell(b, offset: 0)
+      value = offset.positive? ? b.add(@ptr, LLVM::Int(offset)) : @ptr
+
+      b.gep(@memory, [LLVM::Int(0), b.load(value, 'current_cell_ptr')], 'current_cell')
     end
   end
 end
