@@ -11,10 +11,10 @@ module Cbfc
 
     rule(zero_cell: simple(:op)) { Ast::ZeroCell.new }
 
-    # Use the same node type for both kinds of copy loops -
+    # Use the same node type for both kinds of multiply loops -
     # negative ends up with negative indices
-    rule(copy_loop: simple(:ops)) { Ast::CopyLoop.new(ops) }
-    rule(negative_copy_loop: simple(:ops)) { Ast::CopyLoop.new(ops) }
+    rule(multiply_loop: simple(:ops)) { Ast::MultiplyLoop.new(ops) }
+    rule(negative_multiply_loop: simple(:ops)) { Ast::MultiplyLoop.new(ops) }
 
     rule(loop: sequence(:loop_ops)) { Ast::Loop.new(loop_ops) }
 

@@ -14,18 +14,20 @@ module Cbfc
     rule(:junk) { match('[^><+\.,\[\]-]').repeat(1) }
     rule(:junk?) { junk.maybe }
 
-    # handle copying bytes in front of the pointer
-    rule(:copy_core) { str('>') >> junk? >> str('+') >> junk? >> str('<') }
-    rule(:copy_body) { str('>') >> junk? >> str('+').maybe >> copy_body >> junk? >> str('<') | copy_core }
-    rule(:copy_loop) { loop_start >> junk? >> str('-') >> junk? >> copy_body.as(:copy_loop) >> loop_end }
-
-    # handle copying bytes behind the pointer
-    rule(:negative_copy_core) { str('<') >> junk? >> str('+') >> junk? >> str('>') }
-    rule(:negative_copy_body) do
-      str('<') >> junk? >> str('+').maybe >> negative_copy_body >> junk? >> str('>') | negative_copy_core
+    # handle copying (w/ optional multiplication) bytes in front of the pointer
+    rule(:multiply_core) { str('>') >> junk? >> str('+') >> junk? >> str('<') }
+    rule(:multiply_body) do
+      str('>') >> junk? >> str('+').repeat(0) >> multiply_body >> junk? >> str('<') | multiply_core
     end
-    rule(:negative_copy_loop) do
-      loop_start >> junk? >> str('-') >> junk? >> negative_copy_body.as(:negative_copy_loop) >> loop_end
+    rule(:multiply_loop) { loop_start >> junk? >> str('-') >> junk? >> multiply_body.as(:multiply_loop) >> loop_end }
+
+    # handle copying (w/ optional multiplication) bytes behind the pointer
+    rule(:negative_multiply_core) { str('<') >> junk? >> str('+') >> junk? >> str('>') }
+    rule(:negative_multiply_body) do
+      str('<') >> junk? >> str('+').repeat(0) >> negative_multiply_body >> junk? >> str('>') | negative_multiply_core
+    end
+    rule(:negative_multiply_loop) do
+      loop_start >> junk? >> str('-') >> junk? >> negative_multiply_body.as(:negative_multiply_loop) >> loop_end
     end
 
     rule(:zero_cell) { loop_start >> junk? >> match('[+-]').as(:zero_cell) >> junk? >> loop_end }
@@ -39,8 +41,8 @@ module Cbfc
         write_byte |
         read_byte |
         zero_cell |
-        copy_loop |
-        negative_copy_loop |
+        multiply_loop |
+        negative_multiply_loop |
         loop_statement
       ) >> junk?
     end

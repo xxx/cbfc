@@ -29,22 +29,33 @@ module Cbfc
     class WriteByte < BfNode; end
     class ReadByte < BfNode; end
 
-    class CopyLoop < BfNode
+    class MultiplyLoop < BfNode
       attr_reader :offsets
 
       def initialize(ops)
         @ops = ops
         @offsets = []
-        counter = 0
+        index = 0
+        multiplier = 0
 
         ops.to_s.each_char do |op|
           case op
           when '>'
-            counter += 1
+            if multiplier.positive?
+              @offsets << [index, multiplier]
+              multiplier = 0
+            end
+
+            index += 1
           when '<'
-            counter -= 1
+            if multiplier.positive?
+              @offsets << [index, multiplier]
+              multiplier = 0
+            end
+
+            index -= 1
           when '+'
-            @offsets << counter
+            multiplier += 1
           end
         end
       end

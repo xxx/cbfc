@@ -18,7 +18,7 @@ module Cbfc
       Ast::DecVal => :dec_val,
       Ast::WriteByte => :write_byte,
       Ast::ReadByte => :read_byte,
-      Ast::CopyLoop => :copy_loop,
+      Ast::MultiplyLoop => :multiply_loop,
       Ast::ZeroCell => :zero_cell,
       Ast::Loop => :do_loop
     }.freeze
@@ -148,13 +148,19 @@ module Cbfc
       b.store value, current_cell(b)
     end
 
-    def copy_loop(node, b)
-      current_value = b.load current_cell(b), 'copy_loop_ptr_load'
+    def multiply_loop(node, b)
+      current_value = b.load current_cell(b), 'multiply_loop_ptr_load'
 
-      node.offsets.each do |offset|
+      node.offsets.each do |pair|
+        offset, multiplier = pair
         offset_addr = current_cell(b, offset: offset)
-        offset_value = b.load offset_addr, 'copy_loop_cell_load'
-        b.store b.add(offset_value, current_value, 'copy_loop_cell_add'), offset_addr
+        offset_value = b.load offset_addr, 'multiply_loop_cell_load'
+        if multiplier > 1
+          multiplied = b.mul current_value, @int_type.from_i(multiplier), 'multiply_loop_mul'
+          b.store b.add(offset_value, multiplied, 'multiply_loop_cell_add'), offset_addr
+        else
+          b.store b.add(offset_value, current_value, 'multiply_loop_cell_add'), offset_addr
+        end
       end
 
       b.store @width_zero, current_cell(b)
