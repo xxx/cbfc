@@ -8,7 +8,7 @@ module Cbfc
     extend Forwardable
     def_delegators :@module, :to_s
 
-    DATA_SIZE = 30_000
+    CELL_COUNT = 30_000
 
     DISPATCH_TABLE = {
       Ast::Program => :program,
@@ -24,7 +24,7 @@ module Cbfc
 
     ZERO = LLVM::Int(0)
 
-    def initialize(ast, target_triple: 'x86_64-linux-gnu')
+    def initialize(ast, target_triple: 'x86_64-linux-gnu', cell_count: CELL_COUNT)
       @ast = ast
       @module = LLVM::Module.new('cbf')
 
@@ -43,9 +43,9 @@ module Cbfc
         var.linkage = :internal
       end
 
-      @memory = @module.globals.add(LLVM::Type.array(LLVM::Int, DATA_SIZE), :memory) do |var|
+      @memory = @module.globals.add(LLVM::Type.array(LLVM::Int, cell_count), :memory) do |var|
         # var.initializer = LLVM::ConstantAggregateZero.get(LLVM::Int)
-        var.initializer = LLVM::ConstantArray.const(LLVM::Int, DATA_SIZE) { ZERO }
+        var.initializer = LLVM::ConstantArray.const(LLVM::Int, cell_count) { ZERO }
         var.linkage = :internal
       end
     end

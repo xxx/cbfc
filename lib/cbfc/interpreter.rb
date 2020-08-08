@@ -2,7 +2,7 @@
 
 module Cbfc
   class Interpreter
-    DATA_SIZE = 30_000
+    CELL_COUNT = 30_000
 
     DISPATCH_TABLE = {
       Ast::Program => :program,
@@ -16,9 +16,10 @@ module Cbfc
       Ast::Loop => :do_loop
     }.freeze
 
-    def initialize(ast, data_size = DATA_SIZE)
+    def initialize(ast, cell_count: CELL_COUNT)
       @ast = ast
-      @memory = Array.new(data_size, 0)
+      @data_size = cell_count
+      @memory = Array.new(cell_count, 0)
       @ptr = 0
     end
 
@@ -33,12 +34,12 @@ module Cbfc
 
     def inc_ptr(node)
       @ptr += node.count
-      @ptr -= DATA_SIZE while @ptr >= DATA_SIZE
+      @ptr -= @data_size while @ptr >= @data_size
     end
 
     def dec_ptr(node)
       @ptr -= node.count
-      @ptr += DATA_SIZE while @ptr.negative?
+      @ptr += @data_size while @ptr.negative?
     end
 
     def inc_val(node)
