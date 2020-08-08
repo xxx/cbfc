@@ -22,9 +22,10 @@ module Cbfc
       Ast::Loop => :do_loop
     }.freeze
 
-    ZERO = LLVM::Int(0)
+    NATIVE_ZERO = LLVM::Int(0)
+    NATIVE_BITS = FFI.type_size(:int) * 8
 
-    def initialize(ast, target_triple: 'x86_64-linux-gnu', cell_count: CELL_COUNT)
+    def initialize(ast, target_triple: 'x86_64-linux-gnu', cell_count: CELL_COUNT, cell_width: :native)
       @ast = ast
       @module = LLVM::Module.new('cbf')
 
@@ -39,13 +40,23 @@ module Cbfc
       end
 
       @ptr = @module.globals.add(LLVM::Int, :ptr) do |var|
-        var.initializer = ZERO
+        var.initializer = NATIVE_ZERO
         var.linkage = :internal
       end
 
-      @memory = @module.globals.add(LLVM::Type.array(LLVM::Int, cell_count), :memory) do |var|
+      @cell_width = cell_width
+      @int_type = case cell_width
+                  when 8, 16, 32, 64, 128
+                    Object.const_get("LLVM::Int#{cell_width}")
+                  else
+                    LLVM::Int # default to native
+                  end
+
+      @width_zero = @int_type.from_i(0)
+
+      @memory = @module.globals.add(LLVM::Type.array(@int_type, cell_count), :memory) do |var|
         # var.initializer = LLVM::ConstantAggregateZero.get(LLVM::Int)
-        var.initializer = LLVM::ConstantArray.const(LLVM::Int, cell_count) { ZERO }
+        var.initializer = LLVM::ConstantArray.const(@int_type, cell_count) { @width_zero }
         var.linkage = :internal
       end
     end
@@ -79,11 +90,11 @@ module Cbfc
         entry = function.basic_blocks.append('entry')
 
         entry.build do |b|
-          b.store ZERO, @ptr
+          b.store NATIVE_ZERO, @ptr
 
           node.ops.each { |op_node| compile(op_node, b, function) }
 
-          b.ret ZERO
+          b.ret NATIVE_ZERO
         end
       end
     end
@@ -99,26 +110,41 @@ module Cbfc
     def inc_val(node, b, _function)
       addr = current_cell(b)
       value = b.load addr, 'inc_val_load'
-      b.store b.add(value, LLVM::Int(node.count), 'inc_val_add'), addr
+      b.store b.add(value, @int_type.from_i(node.count), 'inc_val_add'), addr
     end
 
     def dec_val(node, b, _function)
       addr = current_cell(b)
       value = b.load addr, 'dec_val_load'
-      b.store b.sub(value, LLVM::Int(node.count), 'dec_val_sub'), addr
+      b.store b.sub(value, @int_type.from_i(node.count), 'dec_val_sub'), addr
     end
 
     def write_byte(_node, b, _function)
       value = b.load current_cell(b), 'write_byte_load'
+
+      if @cell_width < NATIVE_BITS
+        value = b.zext(value, LLVM::Int)
+      elsif @cell_width > NATIVE_BITS
+        value = b.trunc(value, LLVM::Int)
+      end
+
       b.call @putchar, value
     end
 
     def read_byte(_node, b, _function)
-      b.store b.call(@getchar), current_cell(b)
+      value = b.call(@getchar)
+
+      if @cell_width < NATIVE_BITS
+        value = b.trunc(value, @int_type)
+      elsif @cell_width > NATIVE_BITS
+        value = b.zext(value, @int_type)
+      end
+
+      b.store value, current_cell(b)
     end
 
     def zero_cell(_node, b, _function)
-      b.store ZERO, current_cell(b)
+      b.store @width_zero, current_cell(b)
     end
 
     def do_loop(node, b, function)
@@ -131,7 +157,7 @@ module Cbfc
       loop_head.build do |builder|
         loop_cond = builder.icmp :eq,
                                  builder.load(current_cell(builder), 'load_for_icmp'),
-                                 LLVM::Int(0),
+                                 @width_zero,
                                  'loop_head_cond'
         builder.cond loop_cond, loop_end, loop_body
       end

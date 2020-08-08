@@ -2,9 +2,9 @@
 
 ##### A crappy brainfuck compiler and interpreter to get some experience targeting LLVM.
 
-Some differences from the standard - cell sizes are native int size, and currently with the
-compiler pointer does not wrap around memory when incremented or decremented beyond one
-of the ends.
+Some differences from the standard - cell widths default to native int size
+(but are configurable), and currently with the compiler pointer does not wrap
+around memory when incremented or decremented beyond one of the ends.
 
 ## Installation
 
@@ -63,6 +63,10 @@ To compile to a native binary, I've been using the following very janky method:
 
 The gem's `bin` directory has a few scripts in it that might be useful for those who
 just want to interpret or compile some files, without having to write code.
+
+The cell width and count is configurable on the code generator:  
+`Cbfc::CodeGen.new(ast, cell_count: 50000, cell_width: 8)`  
+Cell widths of 8, 16, 32, 64, and 128 bits are supported. Native ints are used by default.
 
 ## Development
 
