@@ -61,17 +61,17 @@ RSpec.describe Cbfc::Transformer do
 
   describe 'multiply_loop' do
     it 'emits an AST node with the index & multiplier pairs' do
-      node = to_ast('[->>+++>++>>++++<<<<<]', :multiply_loop)
+      node = to_ast('[->>+++>++>>++++<<++<<+<]', :multiply_loop)
       expect(node).to be_a(Cbfc::Ast::MultiplyLoop)
-      expect(node.offsets).to eq [[2, 3], [3, 2], [5, 4]]
+      expect(node.offsets).to eq({ 2 => 3, 3 => 4, 5 => 4, 1 => 1 })
     end
   end
 
   describe 'negative_multiply_loop' do
     it 'emits an AST node with the index & multiplier pairs' do
-      node = to_ast('[-<<+++<++<<++++>>>>>]', :negative_multiply_loop)
+      node = to_ast('[-<<+++<++<<++++>>++>>+>]', :negative_multiply_loop)
       expect(node).to be_a(Cbfc::Ast::MultiplyLoop)
-      expect(node.offsets).to eq [[-2, 3], [-3, 2], [-5, 4]]
+      expect(node.offsets).to eq({ -2 => 3, -3 => 4, -5 => 4, -1 => 1 })
     end
   end
 

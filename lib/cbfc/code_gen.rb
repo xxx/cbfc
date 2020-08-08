@@ -178,8 +178,7 @@ module Cbfc
     def multiply_loop(node, b)
       current_value = b.load current_cell(b), 'multiply_loop_ptr_load'
 
-      node.offsets.each do |pair|
-        offset, multiplier = pair
+      node.offsets.each do |offset, multiplier|
         offset_addr = current_cell(b, offset: offset)
         offset_value = b.load offset_addr, 'multiply_loop_cell_load'
         if multiplier > 1

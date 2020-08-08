@@ -60,8 +60,7 @@ module Cbfc
     end
 
     def multiply_loop(node)
-      node.offsets.each do |pair|
-        offset, multiplier = pair
+      node.offsets.each do |offset, multiplier|
         @memory[@ptr + offset] += (@memory[@ptr] * multiplier)
       end
 

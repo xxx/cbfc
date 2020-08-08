@@ -34,7 +34,7 @@ module Cbfc
 
       def initialize(ops)
         @ops = ops
-        @offsets = []
+        @offsets = {}
         index = 0
         multiplier = 0
 
@@ -42,14 +42,16 @@ module Cbfc
           case op
           when '>'
             if multiplier.positive?
-              @offsets << [index, multiplier]
+              @offsets[index] ||= 0
+              @offsets[index] += multiplier
               multiplier = 0
             end
 
             index += 1
           when '<'
             if multiplier.positive?
-              @offsets << [index, multiplier]
+              @offsets[index] ||= 0
+              @offsets[index] += multiplier
               multiplier = 0
             end
 
