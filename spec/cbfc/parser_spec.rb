@@ -75,6 +75,7 @@ RSpec.describe Cbfc::Parser do
       expect(subject.multiply_loop).to parse('[->>>+<<<]')
       expect(subject.multiply_loop).to parse('[->>+>+>+<<<<]')
       expect(subject.multiply_loop).to parse('[->>+++>++>+>>+<<<<<<]')
+      expect(subject.multiply_loop).to parse('[->++++<]')
       expect(subject.multiply_loop).not_to parse('[-<<+<+<+>>>>]')
       expect(subject.multiply_loop).not_to parse('')
     end
@@ -87,6 +88,7 @@ RSpec.describe Cbfc::Parser do
       expect(subject.negative_multiply_loop).to parse('[-<<<+>>>]')
       expect(subject.negative_multiply_loop).to parse('[-<<+<+<+>>>>]')
       expect(subject.negative_multiply_loop).to parse('[-<<+++<++<+<<+>>>>>>]')
+      expect(subject.negative_multiply_loop).to parse('[-<++++>]')
       expect(subject.negative_multiply_loop).not_to parse('[->>+>+>+<<<<]')
       expect(subject.negative_multiply_loop).not_to parse('')
     end

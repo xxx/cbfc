@@ -15,14 +15,14 @@ module Cbfc
     rule(:junk?) { junk.maybe }
 
     # handle copying (w/ optional multiplication) bytes in front of the pointer
-    rule(:multiply_core) { str('>') >> junk? >> str('+') >> junk? >> str('<') }
+    rule(:multiply_core) { str('>') >> junk? >> str('+').repeat(1) >> junk? >> str('<') }
     rule(:multiply_body) do
       str('>') >> junk? >> str('+').repeat(0) >> multiply_body >> junk? >> str('<') | multiply_core
     end
     rule(:multiply_loop) { loop_start >> junk? >> str('-') >> junk? >> multiply_body.as(:multiply_loop) >> loop_end }
 
     # handle copying (w/ optional multiplication) bytes behind the pointer
-    rule(:negative_multiply_core) { str('<') >> junk? >> str('+') >> junk? >> str('>') }
+    rule(:negative_multiply_core) { str('<') >> junk? >> str('+').repeat(1) >> junk? >> str('>') }
     rule(:negative_multiply_body) do
       str('<') >> junk? >> str('+').repeat(0) >> negative_multiply_body >> junk? >> str('>') | negative_multiply_core
     end
