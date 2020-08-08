@@ -26,12 +26,37 @@ module Cbfc
     NATIVE_ZERO = LLVM::Int(0)
     NATIVE_BITS = FFI.type_size(:int) * 8
 
-    def initialize(ast, target_triple: 'x86_64-linux-gnu', cell_count: CELL_COUNT, cell_width: :native)
+    # Reverses the contents of a String or IO object.
+    #
+    # @param ast [Cbfc::Ast::Program] the AST of the program to compile
+    # @param target_triple [String] The target triple of the executable. Can typically be
+    #   found via `gcc -dumpmachine` or `llvm-config --host-target`. Some massaging may
+    #   be required to get it exactly right. Defaults to 'x86_64-linux-gnu'
+    # @param cell_count: Number of cells in the memory array. Defaults to 30,000.
+    # @param cell_width: Width (in bits) of each cell in the memory array.
+    #   8, 16, 32, 64, and 128 are valid values. Any other value results in native ints.
+    #   Defaults to native ints.
+    # @param enable_memory_wrap: Whether or not we check for whether the pointer needs to
+    #   wrap around when it changes. Setting this to false significantly speeds up
+    #   execution of programs, but can also result in segfaults or undefined behavior
+    #   if the program is liberal with where it tries to access memory. When this is
+    #   set to false, the pointer is started in the middle of the memory array, rather
+    #   than at the traditional 0 index, to help avoid segfaults.
+    #   Defaults to true.
+    # @return [Cbfc::CodeGen] a new CodeGen instance
+    def initialize(
+      ast,
+      target_triple: 'x86_64-linux-gnu',
+      cell_count: CELL_COUNT,
+      cell_width: :native,
+      enable_memory_wrap: true
+    )
       @ast = ast
       @module = LLVM::Module.new('cbf')
 
       @module.triple = target_triple
       @cell_count = cell_count
+      @enable_memory_wrap = enable_memory_wrap
 
       @putchar = @module.functions.add('putchar', [LLVM::Int], LLVM::Int) do |function, _int|
         function.add_attribute :no_unwind_attribute
@@ -42,7 +67,9 @@ module Cbfc
       end
 
       @ptr = @module.globals.add(LLVM::Int, :ptr) do |var|
-        var.initializer = NATIVE_ZERO
+        # if disabling memory wrap, start ptr in the middle to reduce chances
+        # of illegal accesses or undefined behavior.
+        var.initializer = @enable_memory_wrap ? NATIVE_ZERO : LLVM::Int(cell_count / 2)
         var.linkage = :internal
       end
 
@@ -198,13 +225,17 @@ module Cbfc
       current = b.load(@ptr, 'offset_ptr_load')
       return current if offset.zero?
 
+      current = b.add(current, LLVM::Int(offset), 'offset_ptr_add')
+
+      # skip all of this if we're not caring about wrapping memory
+      return current unless @enable_memory_wrap
+
       # handle memory wrapping
       if_greater_body = @current_function.basic_blocks.append('if_greater_body')
       if_less_head = @current_function.basic_blocks.append('if_less_head')
       if_less_body = @current_function.basic_blocks.append('if_less_body')
       if_end = @current_function.basic_blocks.append('if_end')
 
-      current = b.add(current, LLVM::Int(offset), 'offset_ptr_add')
       if_greater = b.icmp :sge,
                           current,
                           LLVM::Int(@cell_count),

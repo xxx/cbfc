@@ -65,7 +65,7 @@ if ARGV[1] == 'ast'
   exit 0
 end
 
-compiler = Cbfc::CodeGen.new(ast, target_triple: triple)
+compiler = Cbfc::CodeGen.new(ast, target_triple: triple, enable_memory_wrap: true)
 compiler.compile
 
 case ARGV[1]
