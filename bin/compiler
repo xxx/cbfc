@@ -84,7 +84,7 @@ if triple.length.zero?
   exit 1
 end
 
-compiler = Cbfc::LlvmCodeGen.new(optimized, target_triple: triple, enable_memory_wrap: true)
+compiler = Cbfc::LlvmCodeGen.new(ast, target_triple: triple, enable_memory_wrap: true)
 compiler.compile
 
 case ARGV[1]
