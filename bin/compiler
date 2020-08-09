@@ -41,6 +41,7 @@ if ARGV.length < 2
   warn '  end with .o - file emitted as an object file'
   warn '  "parse" - emit the parse tree to stdout'
   warn '  "ast" - emit the AST to stdout'
+  warn '  "ast-opt" - emit the AST after running some optimizations to stdout'
   warn '  "-" - emits LLVM IR to stdout'
   warn '  anything else - emits an executable with that name'
   exit 1
@@ -58,9 +59,15 @@ if ARGV[1] == 'ast'
   exit 0
 end
 
+optimized = Cbfc::Optimizer.recursive_optimize(ast)
+if ARGV[1] == 'ast-opt'
+  pp optimized
+  exit 0
+end
+
 if ARGV[1].match?(/\.c\z/)
   File.open(ARGV[1], 'wb') do |io|
-    compiler = Cbfc::CCodeGen.new(ast, io, cell_width: 8)
+    compiler = Cbfc::CCodeGen.new(optimized, io, cell_width: 8)
     compiler.compile
   end
 
@@ -75,7 +82,7 @@ if triple.length.zero?
   exit 1
 end
 
-compiler = Cbfc::LlvmCodeGen.new(ast, target_triple: triple, enable_memory_wrap: true)
+compiler = Cbfc::LlvmCodeGen.new(optimized, target_triple: triple, enable_memory_wrap: true)
 compiler.compile
 
 case ARGV[1]
