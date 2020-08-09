@@ -4,7 +4,7 @@
 # https://github.com/chriswailes/RLTK/blob/master/examples/brainfuck/bfjit.rb
 
 module Cbfc
-  class CodeGen
+  class LlvmCodeGen
     extend Forwardable
     def_delegators :@module, :to_s
 
@@ -43,7 +43,7 @@ module Cbfc
     #   set to false, the pointer is started in the middle of the memory array, rather
     #   than at the traditional 0 index, to help avoid segfaults.
     #   Defaults to true.
-    # @return [Cbfc::CodeGen] a new CodeGen instance
+    # @return [Cbfc::LlvmCodeGen] a new CodeGen instance
     def initialize(
       ast,
       target_triple: 'x86_64-linux-gnu',

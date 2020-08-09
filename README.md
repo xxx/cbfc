@@ -40,7 +40,7 @@ interpreter.eval
 #
 # All Further usages require (in-memory) code generation:
 #
-code_gen = Cbfc::CodeGen.new(ast)
+code_gen = Cbfc::LlvmCodeGen.new(ast)
 code_gen.compile
 
 # Interpret via LLVM Interpreter (fast))
@@ -66,12 +66,12 @@ The gem's `bin` directory has a few scripts in it that might be useful for those
 just want to interpret or compile some files, without having to write code.
 
 The cell width and count is configurable on the code generator:  
-`Cbfc::CodeGen.new(ast, cell_count: 50000, cell_width: 8)`  
+`Cbfc::LlvmCodeGen.new(ast, cell_count: 50000, cell_width: 8)`  
 Cell widths of 8, 16, 32, 64, and 128 bits are supported. Native ints are used by default,
 and the cell count defaults to 30,000.
 
 Memory wrap checking is configuration on the code generator:
-`Cbfc::CodeGen.new(ast, enable_memory_wrap: false)`
+`Cbfc::LlvmCodeGen.new(ast, enable_memory_wrap: false)`
 Setting `enable_memory_wrap` to false will disable checking for, and doing, any memory
 wrapping in the program, which can result in a significant performance increase, but
 will lead to undefined behavior and possible segfaults if memory is read or written

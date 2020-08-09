@@ -7,6 +7,6 @@ require 'cbfc'
 # Interpret a file via LLVM's JIT-enabled interpreter.
 parsed = Cbfc::Parser.parse_file(ARGV[0])
 ast = Cbfc::Transformer.new.apply(parsed)
-compiler = Cbfc::CodeGen.new(ast)
+compiler = Cbfc::LlvmCodeGen.new(ast)
 compiler.compile
 compiler.interpret_jit

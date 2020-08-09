@@ -11,7 +11,7 @@ require 'cbfc/parser'
 require 'cbfc/transformer'
 require 'cbfc/interpreter'
 require 'cbfc/optimizer'
-require 'cbfc/code_gen'
+require 'cbfc/llvm_code_gen'
 
 module Cbfc
   class Error < StandardError; end
