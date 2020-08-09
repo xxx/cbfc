@@ -20,7 +20,10 @@ module Cbfc
       str('>') >> junk? >> str('+').repeat(0) >> multiply_body >>
         junk? >> str('+').repeat(0) >> junk? >> str('<') | multiply_core
     end
-    rule(:multiply_loop) { loop_start >> junk? >> str('-') >> junk? >> multiply_body.as(:multiply_loop) >> loop_end }
+    rule(:multiply_with_minus) do
+      str('-') >> junk? >> multiply_body.as(:multiply_loop) | multiply_body.as(:multiply_loop) >> junk? >> str('-')
+    end
+    rule(:multiply_loop) { loop_start >> junk? >> multiply_with_minus >> junk? >> loop_end }
 
     # handle copying (w/ optional multiplication) bytes behind the pointer
     rule(:negative_multiply_core) { str('<') >> junk? >> str('+').repeat(1) >> junk? >> str('>') }
@@ -28,8 +31,12 @@ module Cbfc
       str('<') >> junk? >> str('+').repeat(0) >> negative_multiply_body >>
         junk? >> str('+').repeat(0) >> junk? >> str('>') | negative_multiply_core
     end
+    rule(:negative_multiply_with_minus) do
+      str('-') >> junk? >> negative_multiply_body.as(:negative_multiply_loop) |
+        negative_multiply_body.as(:negative_multiply_loop) >> junk? >> str('-')
+    end
     rule(:negative_multiply_loop) do
-      loop_start >> junk? >> str('-') >> junk? >> negative_multiply_body.as(:negative_multiply_loop) >> loop_end
+      loop_start >> junk? >> negative_multiply_with_minus >> junk? >> loop_end
     end
 
     rule(:zero_cell) { loop_start >> junk? >> match('[+-]').as(:zero_cell) >> junk? >> loop_end }

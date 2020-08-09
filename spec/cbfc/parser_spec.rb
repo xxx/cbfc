@@ -74,7 +74,9 @@ RSpec.describe Cbfc::Parser do
   describe 'multiply_loop' do
     it 'parses loops that multiply cells to the right of the pointer' do
       expect(subject.multiply_loop).to parse('[->+<]')
+      expect(subject.multiply_loop).to parse('[>+<-]')
       expect(subject.multiply_loop).to parse("[->\n+>+<<]")
+      expect(subject.multiply_loop).to parse("[>\n+>+<<-]")
       expect(subject.multiply_loop).to parse('[->>>+<<<]')
       expect(subject.multiply_loop).to parse('[->>+>+>+<<<<]')
       expect(subject.multiply_loop).to parse('[->>+++>++>+>>+<<<<<<]')
@@ -88,7 +90,9 @@ RSpec.describe Cbfc::Parser do
   describe 'negative_multiply_loop' do
     it 'parses loops that multiply cells to the left of the pointer' do
       expect(subject.negative_multiply_loop).to parse('[-<+>]')
+      expect(subject.negative_multiply_loop).to parse('[<+>-]')
       expect(subject.negative_multiply_loop).to parse("[-<\n+<+>>]")
+      expect(subject.negative_multiply_loop).to parse("[<\n+<+>>-]")
       expect(subject.negative_multiply_loop).to parse('[-<<<+>>>]')
       expect(subject.negative_multiply_loop).to parse('[-<<+<+<+>>>>]')
       expect(subject.negative_multiply_loop).to parse('[-<<+++<++<+<<+>>>>>>]')
