@@ -1,6 +1,6 @@
 # Cbfc
 
-##### A crappy brainfuck compiler and interpreter to get some experience targeting LLVM.
+##### A crappy Brainfuck compiler and interpreter to get some experience targeting LLVM.
 
 Some differences from the standard - cell widths default to native int size
 (but are configurable) for the compiler, and the Ruby interpreter uses BigInts.
@@ -68,7 +68,8 @@ just want to interpret or compile some files, without having to write code.
 The cell width and count is configurable on the code generator:  
 `Cbfc::LlvmCodeGen.new(ast, cell_count: 50000, cell_width: 8)`  
 Cell widths of 8, 16, 32, 64, and 128 bits are supported. Native ints are used by default,
-and the cell count defaults to 30,000.
+and the cell count defaults to 30,000. 128 bit-widths are not available when generating
+C code with the `Cbfc::CCodeGen` class. 
 
 Memory wrap checking is configuration on the code generator:
 `Cbfc::LlvmCodeGen.new(ast, enable_memory_wrap: false)`
@@ -76,6 +77,31 @@ Setting `enable_memory_wrap` to false will disable checking for, and doing, any 
 wrapping in the program, which can result in a significant performance increase, but
 will lead to undefined behavior and possible segfaults if memory is read or written
 to beyond the ends of the array. `enable_member_wrap` defaults to true.   
+
+### /bin scripts
+
+Some of the scripts in the /bin directory of the gem may be useful. `interpreter` is
+a (slow) pure-Ruby Brainfuck interpreter. `interpreter-jit` will compile a file to
+LLVM IR, then run it through its JIT-enabled interpreter. It's much faster than the
+the Ruby interpreter.
+
+The `compiler` script takes in a Brainfuck file and can emit a number of different formats:
+```
+Usage: ./compiler <infile> <outfile>
+Output filename determines format:
+  end with .ll - file emitted as LLVM IR
+  end with .bc - file emitted as LLVM bitcode
+  end with .c - file emitted as C source code
+  end with .s - file emitted as assembly language for the target machine
+  end with .o - file emitted as an object file
+  "parse" - emit the parse tree to stdout
+  "ast" - emit the AST to stdout
+  "-" - emits LLVM IR to stdout
+  anything else - emits an executable with that name
+```
+`compiler` makes a number of assumptions on what and where some things are installed,
+so YMMV with it. It may require some changes to work on your system. It's really just
+an example of how to do various things in one place.
 
 ## Development
 
