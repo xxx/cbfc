@@ -50,8 +50,7 @@ module Cbfc
 
       # This loops until everything is combined.
       loop do
-        list.each_slice(2) do |ab_pair|
-          a, b = ab_pair
+        list.each_slice(2) do |a, b|
           combined = b.nil? ? [a] : a.combine(b)
           result.concat(combined)
         end
