@@ -86,6 +86,7 @@ module Cbfc
     # @param node [Cbfc::Ast::BfNode] An AST node to compile
     # @param builder [LLVM::Builder] - an optional builder instance to represent the current enclosing BasicBlock
     def compile(node = @ast, builder = nil)
+      pp node
       method = DISPATCH_TABLE.fetch(node.class)
       send(method, node, builder)
       self

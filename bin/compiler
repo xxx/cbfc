@@ -59,15 +59,17 @@ if ARGV[1] == 'ast'
   exit 0
 end
 
-optimized = Cbfc::Optimizer.recursive_optimize(ast)
+# Optimizes the ast in-place
+Cbfc::Optimizer.recursive_optimize!(ast)
+
 if ARGV[1] == 'ast-opt'
-  pp optimized
+  pp ast
   exit 0
 end
 
 if ARGV[1].match?(/\.c\z/)
   File.open(ARGV[1], 'wb') do |io|
-    compiler = Cbfc::CCodeGen.new(optimized, io, cell_width: 8)
+    compiler = Cbfc::CCodeGen.new(ast, io, cell_width: 8)
     compiler.compile
   end
 

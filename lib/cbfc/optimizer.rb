@@ -4,19 +4,21 @@
 module Cbfc
   class Optimizer
     # Recursively handles optimizing a full tree
-    def self.recursive_optimize(ast)
+    # This method updates the AST in-place.
+    def self.recursive_optimize!(ast)
       return ast unless ast.respond_to?(:ops)
 
-      optimized = optimize(ast.ops)
+      ast.ops = optimize(ast.ops)
 
-      optimized.each do |operation|
+      ast.ops.each do |operation|
         operation.ops = optimize(operation.ops) if operation.respond_to?(:ops)
       end
 
-      optimized
+      ast
     end
 
     # Optimize a single ops list, without recursing into loops
+    # Single passes will not change the ops
     def self.optimize(ops)
       combine_nodes(
         remove_adjacent_loops(ops)
