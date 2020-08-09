@@ -7,7 +7,7 @@ module Cbfc
     rule(:inc_val) { (str('+').as(:op) >> (str('+').as(:op) | junk).repeat(0)).as(:inc_val) }
     rule(:dec_val) { (str('-').as(:op) >> (str('-').as(:op) | junk).repeat(0)).as(:dec_val) }
     rule(:write_byte) { str('.').as(:write_byte) }
-    rule(:read_byte) { str(',').as(:read_byte) }
+    rule(:read_byte) { match('[+-]').repeat(0) >> junk? >> str(',').as(:read_byte) }
     rule(:loop_start) { str('[') }
     rule(:loop_end) { str(']') }
 
@@ -36,12 +36,12 @@ module Cbfc
     rule(:loop_statement) { loop_start >> junk? >> statement.repeat.as(:loop) >> loop_end }
     rule(:statement) do
       (
+        read_byte | # read_byte comes first to skip over any value changes that precede it
         inc_ptr |
         dec_ptr |
         inc_val |
         dec_val |
         write_byte |
-        read_byte |
         zero_cell |
         multiply_loop |
         negative_multiply_loop |

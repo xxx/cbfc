@@ -53,6 +53,9 @@ RSpec.describe Cbfc::Parser do
   describe 'read_byte' do
     it 'parses read_byte operations' do
       expect(subject.read_byte).to parse(',')
+      expect(subject.read_byte).to parse('-,')
+      expect(subject.read_byte).to parse('-+,')
+      expect(subject.read_byte).to parse('-+-+-+foo,')
       expect(subject.read_byte).not_to parse(',,')
       expect(subject.read_byte).not_to parse(',>')
       expect(subject.read_byte).not_to parse('')
@@ -133,6 +136,14 @@ RSpec.describe Cbfc::Parser do
       expect(subject.program).to parse(hello_world)
 
       expect(subject.statement).not_to parse('')
+    end
+
+    it 'correctly parses the read_byte optimization' do
+      str = '++,>'
+
+      expect(subject.program).to parse(str)
+      parsed = subject.program.parse(str)
+      expect(parsed.fetch(:program).first).to have_key(:read_byte)
     end
   end
 end
