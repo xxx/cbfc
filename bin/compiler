@@ -88,6 +88,7 @@ else
     emit_llc_output(tmpfile.path, compiler.to_s, 'obj', '-O0')
     `/usr/bin/env gcc #{tmpfile.path} -o #{ARGV[1]}`
   ensure
+    tmpfile.close
     tmpfile.unlink
   end
   puts "Executable file emitted to #{ARGV[1]}"
