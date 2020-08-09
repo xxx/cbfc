@@ -4,7 +4,6 @@
 require 'bundler/setup'
 require 'cbfc'
 require 'open3'
-require 'securerandom'
 require 'tempfile'
 
 # Transform an input file into various kinds of output files.
