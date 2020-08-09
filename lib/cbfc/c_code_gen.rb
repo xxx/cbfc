@@ -2,11 +2,28 @@
 
 module Cbfc
   class CCodeGen
-    CELL_COUNT = LlvmCodeGen::CELL_COUNT
-    DISPATCH_TABLE = LlvmCodeGen::DISPATCH_TABLE
+    CELL_COUNT = CodeGen::CELL_COUNT
+    DISPATCH_TABLE = CodeGen::DISPATCH_TABLE
 
     attr_reader :io
 
+    # Create a code generator targeting the C (C99) programming language.
+    #
+    # @param ast [Cbfc::Ast::Program] the AST of the program to compile
+    # @param io [IO] An IO object to write to. File is most common probably, but
+    #   e.g. StringIO also can be used.
+    # @param cell_count: Number of cells in the memory array. Defaults to 30,000.
+    # @param cell_width: Width (in bits) of each cell in the memory array.
+    #   8, 16, 32, and 64 are valid values. Any other value results in native ints.
+    #   Defaults to native ints.
+    # @param enable_memory_wrap: Whether or not we check for whether the pointer needs to
+    #   wrap around when it changes. Setting this to false significantly speeds up
+    #   execution of programs, but can also result in segfaults or undefined behavior
+    #   if the program is liberal with where it tries to access memory. When this is
+    #   set to false, the pointer is started in the middle of the memory array, rather
+    #   than at the traditional 0 index, to help avoid segfaults.
+    #   Defaults to true.
+    # @return [Cbfc::CCodeGen] a new CCodeGen instance
     def initialize(
       ast,
       io,
@@ -23,13 +40,16 @@ module Cbfc
         @int_type = "int#{cell_width}_t"
       else
         # default to native
-        @cell_width = LlvmCodeGen::NATIVE_BITS
+        @cell_width = CodeGen::NATIVE_BITS
         @int_type = 'int'
       end
       @enable_memory_wrap = enable_memory_wrap
       @indent_level = 1
     end
 
+    # Compile a node and write the output to @io
+    #
+    # @param node [Cbfc::Ast::BfNode] An AST node to compile
     def compile(node = @ast)
       method = DISPATCH_TABLE.fetch(node.class)
       send(method, node)

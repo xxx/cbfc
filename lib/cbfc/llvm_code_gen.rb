@@ -8,25 +8,14 @@ module Cbfc
     extend Forwardable
     def_delegators :@module, :to_s
 
-    CELL_COUNT = 30_000
+    CELL_COUNT = CodeGen::CELL_COUNT
 
-    DISPATCH_TABLE = {
-      Ast::Program => :program,
-      Ast::IncPtr => :inc_ptr,
-      Ast::DecPtr => :dec_ptr,
-      Ast::IncVal => :inc_val,
-      Ast::DecVal => :dec_val,
-      Ast::WriteByte => :write_byte,
-      Ast::ReadByte => :read_byte,
-      Ast::MultiplyLoop => :multiply_loop,
-      Ast::ZeroCell => :zero_cell,
-      Ast::Loop => :do_loop
-    }.freeze
+    DISPATCH_TABLE = CodeGen::DISPATCH_TABLE
 
     NATIVE_ZERO = LLVM::Int(0)
-    NATIVE_BITS = FFI.type_size(:int) * 8
+    NATIVE_BITS = CodeGen::NATIVE_BITS
 
-    # Reverses the contents of a String or IO object.
+    # Create a code generator targeting LLVM.
     #
     # @param ast [Cbfc::Ast::Program] the AST of the program to compile
     # @param target_triple [String] The target triple of the executable. Can typically be
@@ -43,7 +32,7 @@ module Cbfc
     #   set to false, the pointer is started in the middle of the memory array, rather
     #   than at the traditional 0 index, to help avoid segfaults.
     #   Defaults to true.
-    # @return [Cbfc::LlvmCodeGen] a new CodeGen instance
+    # @return [Cbfc::LlvmCodeGen] a new LlvmCodeGen instance
     def initialize(
       ast,
       target_triple: 'x86_64-linux-gnu',
@@ -92,20 +81,31 @@ module Cbfc
       end
     end
 
+    # Compile a node and store it in memory on this class
+    #
+    # @param node [Cbfc::Ast::BfNode] An AST node to compile
+    # @param builder [LLVM::Builder] - an optional builder instance to represent the current enclosing BasicBlock
     def compile(node = @ast, builder = nil)
       method = DISPATCH_TABLE.fetch(node.class)
       send(method, node, builder)
       self
     end
 
+    # Emit compiled-in-memory code to an LLVM bitcode file
+    #
+    # @param path [String] - the path to write to
     def to_bitcode(path)
       @module.write_bitcode(path)
     end
 
+    # Emit compiled-in-memory code to a file as LLVM IR
+    #
+    # @param path [String] - the path to write to
     def to_file(path)
       File.write(path, to_s)
     end
 
+    # Run the compiled-in-memory code through the LLVM interpreter
     def interpret_jit
       LLVM.init_jit
 

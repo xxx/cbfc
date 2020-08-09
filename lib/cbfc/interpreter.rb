@@ -2,32 +2,31 @@
 
 module Cbfc
   class Interpreter
-    CELL_COUNT = 30_000
+    CELL_COUNT = CodeGen::CELL_COUNT
 
-    DISPATCH_TABLE = {
-      Ast::Program => :program,
-      Ast::IncPtr => :inc_ptr,
-      Ast::DecPtr => :dec_ptr,
-      Ast::IncVal => :inc_val,
-      Ast::DecVal => :dec_val,
-      Ast::WriteByte => :write_byte,
-      Ast::ReadByte => :read_byte,
-      Ast::MultiplyLoop => :multiply_loop,
-      Ast::ZeroCell => :zero_cell,
-      Ast::Loop => :do_loop
-    }.freeze
+    DISPATCH_TABLE = CodeGen::DISPATCH_TABLE
 
+    # Create a code generator targeting the C (C99) programming language.
+    #
+    # @param ast [Cbfc::Ast::Program] the AST of the program to compile
+    # @param cell_count: Number of cells in the memory array. Defaults to 30,000.
+    # @return [Cbfc::Interpreter] a new Interpreter instance
     def initialize(ast, cell_count: CELL_COUNT)
       @ast = ast
-      @data_size = cell_count
+      @cell_count = cell_count
       @memory = Array.new(cell_count, 0)
       @ptr = 0
     end
 
+    # Evaluate a node through the interpreter
+    #
+    # @param node [Cbfc::Ast::BfNode] An AST node to evaluate
     def eval(node = @ast)
       method = DISPATCH_TABLE.fetch(node.class)
       send(method, node)
     end
+
+    private
 
     def program(node)
       node.ops.each { |op| eval(op) } # rubocop:disable Security/Eval
@@ -35,12 +34,12 @@ module Cbfc
 
     def inc_ptr(node)
       @ptr += node.count
-      @ptr -= @data_size while @ptr >= @data_size
+      @ptr -= @cell_count while @ptr >= @cell_count
     end
 
     def dec_ptr(node)
       @ptr -= node.count
-      @ptr += @data_size while @ptr.negative?
+      @ptr += @cell_count while @ptr.negative?
     end
 
     def inc_val(node)
