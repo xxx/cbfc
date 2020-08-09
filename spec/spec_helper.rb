@@ -14,3 +14,9 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 end
+
+def to_ast(string, parser_rule = :program)
+  parsed = Cbfc::Parser.new.public_send(parser_rule).parse(string)
+  Cbfc::Transformer.new.apply(parsed)
+end
+

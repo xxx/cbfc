@@ -1,11 +1,6 @@
 # frozen_string_literal: true
 
 RSpec.describe Cbfc::Transformer do
-  def to_ast(string, parser_rule)
-    parsed = Cbfc::Parser.new.public_send(parser_rule).parse(string)
-    described_class.new.apply(parsed)
-  end
-
   describe 'inc_ptr' do
     it 'combines the ops into the AST count' do
       node = to_ast('>>>>>>', :inc_ptr)

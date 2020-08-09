@@ -1,20 +1,21 @@
 # frozen_string_literal: true
 
 module Cbfc
-  class BfNode < Object; end
-  class CountNode < BfNode
-    attr_reader :count
-    def initialize(count)
-      @count = count
-    end
-  end
-
   module Ast
+    class BfNode < Object; end
+    class CountNode < BfNode
+      attr_accessor :count
+      def initialize(count)
+        @count = count
+      end
+    end
+    class LoopNode < BfNode; end
+
     class Program < BfNode
       attr_reader :ops
 
       def initialize(ops)
-        @ops = ops
+        @ops = Cbfc::Optimizer.optimize(ops)
       end
 
       def to_s
@@ -29,7 +30,7 @@ module Cbfc
     class WriteByte < BfNode; end
     class ReadByte < BfNode; end
 
-    class MultiplyLoop < BfNode
+    class MultiplyLoop < LoopNode
       attr_reader :offsets
 
       def initialize(ops)
@@ -63,13 +64,13 @@ module Cbfc
       end
     end
 
-    class ZeroCell < BfNode; end
+    class ZeroCell < LoopNode; end
 
-    class Loop < BfNode
+    class Loop < LoopNode
       attr_reader :ops
 
       def initialize(ops)
-        @ops = ops
+        @ops = Cbfc::Optimizer.optimize(ops)
       end
 
       def to_s
