@@ -45,8 +45,8 @@ module Cbfc
 
     def self.combine_nodes(ops)
       list = ops
-      result = []
       length = list.length
+      result = []
 
       # This loops until everything is combined.
       loop do
@@ -57,8 +57,8 @@ module Cbfc
 
         break if result.length == length
 
-        length = result.length
         list = result
+        length = result.length
         result = []
       end
 
