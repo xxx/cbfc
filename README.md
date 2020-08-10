@@ -2,10 +2,12 @@
 
 ##### A crappy Brainfuck compiler and interpreter to get some experience targeting LLVM.
 
-Some differences from the standard - cell widths default to native int size
-(but are configurable) for the compiler, and the Ruby interpreter uses BigInts.
+Some differences from the standard - the Ruby interpreter uses BigInts and wraps memory.
+The LLVM and C code generators are configurable in this regard, but default to the
+traditional 8 bit cells and no memory wrapping.
 
-This incorporates some optimizations suggested at http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html. 
+This project incorporates a number of optimizations suggested at
+http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html. 
 
 ## Installation
 
