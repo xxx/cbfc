@@ -9,6 +9,7 @@ RSpec.describe Cbfc do
     expect do
       parsed = Cbfc::Parser.new.parse(hello_world)
       ast = Cbfc::Transformer.new.apply(parsed)
+      ast.optimize
       Cbfc::LlvmCodeGen.new(ast).compile
     end.not_to raise_error
   end

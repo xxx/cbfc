@@ -31,39 +31,58 @@ Or install it yourself as:
 ## Usage
 
 ```ruby
+
+
+
+
+
+
 # Create an AST from a file:
 parsed = Cbfc::Parser.parse_file(ARGV[0])
 ast = Cbfc::Transformer.new.apply(parsed)
+
+# Optionally run some peephole optimizations...
+ast.optimize
 
 # Interpret via Ruby Interpreter (slow)
 interpreter = Cbfc::Interpreter.new(ast)
 interpreter.eval
 
-# Optionally run some peephole optimizations...
-ast.optimize
-
 #
 # All Further usages require (in-memory) code generation:
 #
-code_gen = Cbfc::LlvmCodeGen.new(ast)
-code_gen.compile
+llvm_gen = Cbfc::LlvmCodeGen.new(ast)
+llvm_gen.compile
 
 # Interpret via LLVM Interpreter (fast))
-code_gen.interpret_jit
+llvm_gen.interpret_jit
 
 # Emit the IR for the compiled file
-code_gen.to_s
+llvm_gen.to_s
 
 # Emit the IR to a file
-code_gen.to_file(path)
+llvm_gen.to_file(path)
 
 # Emit LLVM bitcode to a file
-code_gen.to_bitcode(path)
+llvm_gen.to_bitcode(path)
+
+#
+# Output as C is also possible:
+#
+File.open('my_file.c', 'wb') do |f|
+  Cbfc::CCodeGen.new(ast, f).compile
+end
+
+# or...
+
+io = StringIO.new
+Cbfc::CCodeGen.new(ast, io).compile
+io.string # the C source as a string
 ```
 
-To compile to a native binary, I've been using the following very janky method:
+To compile the LLVM IR or bitcode to a native binary, I've been using the following rather janky method:
 
-1. Emit an IR or bitcode file somewhere.
+1. Emit your IR or bitcode file somewhere.
 1. `llc <my_file.ll> -filetype=obj -O3 --relocation-model=pic -o my_file.o`
 1. `gcc my_file.o -o my_file`
 
