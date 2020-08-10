@@ -147,7 +147,7 @@ module Cbfc
                      CODE
                    else
                      <<~CODE
-                       inline int offset_ptr(int offset) {
+                       int offset_ptr(int offset) {
                            return ptr + offset;
                        }
                      CODE
