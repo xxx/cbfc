@@ -16,10 +16,14 @@ module Cbfc
       Ast::WriteByte => :write_byte,
       Ast::ReadByte => :read_byte,
       Ast::MultiplyLoop => :multiply_loop,
+      Ast::ScanLeft => :scan_left,
+      Ast::ScanRight => :scan_right,
       Ast::ZeroCell => :zero_cell,
       Ast::Loop => :do_loop
     }.freeze
 
     NATIVE_BITS = FFI.type_size(:int) * 8
+    SIZE_T_BITS = FFI.type_size(:size_t) * 8
+    SIZE_T = Object.const_get("LLVM::Int#{SIZE_T_BITS}")
   end
 end

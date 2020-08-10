@@ -10,6 +10,7 @@ PATH
   remote: .
   specs:
     cbfc (0.1.0)
+      ffi
       parslet
 
 GEM

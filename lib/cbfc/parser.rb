@@ -40,6 +40,8 @@ module Cbfc
     end
 
     rule(:zero_cell) { loop_start >> junk? >> match('[+-]').as(:zero_cell) >> junk? >> loop_end }
+    rule(:scan_left) { loop_start >> junk? >> str('<').as(:scan_left) >> junk? >> loop_end }
+    rule(:scan_right) { loop_start >> junk? >> str('>').as(:scan_right) >> junk? >> loop_end }
     rule(:loop_statement) { loop_start >> junk? >> statement.repeat.as(:loop) >> loop_end }
     rule(:statement) do
       (
@@ -49,6 +51,8 @@ module Cbfc
         inc_val |
         dec_val |
         write_byte |
+        scan_right |
+        scan_left |
         zero_cell |
         multiply_loop |
         negative_multiply_loop |

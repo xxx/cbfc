@@ -47,6 +47,20 @@ RSpec.describe Cbfc::Transformer do
     end
   end
 
+  describe 'scan_left' do
+    it 'emits an AST node' do
+      node = to_ast('[<]', :scan_left)
+      expect(node).to be_a(Cbfc::Ast::ScanLeft)
+    end
+  end
+
+  describe 'scan_right' do
+    it 'emits an AST node' do
+      node = to_ast('[>]', :scan_right)
+      expect(node).to be_a(Cbfc::Ast::ScanRight)
+    end
+  end
+
   describe 'zero_cell' do
     it 'emits an AST node' do
       node = to_ast('[-]', :zero_cell)

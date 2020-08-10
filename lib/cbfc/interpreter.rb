@@ -66,6 +66,22 @@ module Cbfc
       @memory[@ptr] = 0
     end
 
+    # no memory wrapping
+    def scan_left(_)
+      index = @ptr
+      index -= 1 while @memory[index] != 0
+      @ptr = index
+      raise 'scan_left failed to find a 0 cell' if @ptr.negative?
+    end
+
+    # no memory wrapping
+    def scan_right(_)
+      index = @ptr
+      index += 1 while @memory[index] != 0
+      @ptr = index
+      raise 'scan_right failed to find a 0 cell' if @ptr >= @cell_count
+    end
+
     def zero_cell(_)
       @memory[@ptr] = 0
     end

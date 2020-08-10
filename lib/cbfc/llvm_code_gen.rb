@@ -24,21 +24,19 @@ module Cbfc
     # @param cell_count: Number of cells in the memory array. Defaults to 30,000.
     # @param cell_width: Width (in bits) of each cell in the memory array.
     #   8, 16, 32, 64, and 128 are valid values. Any other value results in native ints.
-    #   Defaults to native ints.
+    #   Defaults to 8-bit ints.
     # @param enable_memory_wrap: Whether or not we check for whether the pointer needs to
     #   wrap around when it changes. Setting this to false significantly speeds up
-    #   execution of programs, but can also result in segfaults or undefined behavior
-    #   if the program is liberal with where it tries to access memory. When this is
-    #   set to false, the pointer is started in the middle of the memory array, rather
-    #   than at the traditional 0 index, to help avoid segfaults.
-    #   Defaults to true.
+    #   execution of programs, but can also result in segfaults when compiled with
+    #   optimizations. (Looking at you, Mandelbrot)
+    #   Defaults to false.
     # @return [Cbfc::LlvmCodeGen] a new LlvmCodeGen instance
     def initialize(
       ast,
       target_triple: 'x86_64-linux-gnu',
       cell_count: CELL_COUNT,
-      cell_width: :native,
-      enable_memory_wrap: true
+      cell_width: 8,
+      enable_memory_wrap: false
     )
       @ast = ast
       @module = LLVM::Module.new('cbf')
@@ -55,10 +53,16 @@ module Cbfc
         function.add_attribute :no_unwind_attribute
       end
 
+      @memchr = @module.functions.add(
+        'memchr',
+        [LLVM::Pointer(LLVM::Int8), LLVM::Int, CodeGen::SIZE_T],
+        LLVM::Pointer(LLVM::Int8)
+      ) do |function|
+        function.add_attribute :no_unwind_attribute
+      end
+
       @ptr = @module.globals.add(LLVM::Int, :ptr) do |var|
-        # if disabling memory wrap, start ptr in the middle to reduce chances
-        # of illegal accesses or undefined behavior.
-        var.initializer = @enable_memory_wrap ? NATIVE_ZERO : LLVM::Int(cell_count / 2)
+        var.initializer = NATIVE_ZERO
         var.linkage = :internal
       end
 
@@ -86,7 +90,6 @@ module Cbfc
     # @param node [Cbfc::Ast::BfNode] An AST node to compile
     # @param builder [LLVM::Builder] - an optional builder instance to represent the current enclosing BasicBlock
     def compile(node = @ast, builder = nil)
-      pp node
       method = DISPATCH_TABLE.fetch(node.class)
       send(method, node, builder)
       self
@@ -123,8 +126,6 @@ module Cbfc
         entry = function.basic_blocks.append('entry')
 
         entry.build do |b|
-          b.store NATIVE_ZERO, @ptr
-
           node.ops.each { |op_node| compile(op_node, b) }
 
           b.ret NATIVE_ZERO
@@ -191,6 +192,34 @@ module Cbfc
       end
 
       b.store @width_zero, current_cell(b)
+    end
+
+    def scan_left(_node, b)
+      # memrchr optimization only works with single-byte cells
+      unless @cell_width == 8 && Cbfc::MemrchrChecker::HAS_MEMRCHR
+        do_loop(Ast::Loop.new([Ast::DecPtr.new(1)]), b)
+        return
+      end
+
+      do_loop(Ast::Loop.new([Ast::DecPtr.new(1)]), b)
+    end
+
+    def scan_right(_node, b)
+      # memchr optimization only works with single-byte cells
+      unless @cell_width == 8
+        do_loop(Ast::Loop.new([Ast::IncPtr.new(1)]), b)
+        return
+      end
+
+      ptr_value = b.load @ptr, 'scan_right_ptr'
+      mem_ptr = b.inbounds_gep(@memory, [NATIVE_ZERO, ptr_value], 'mem_ptr')
+      resized_mem_ptr = b.bit_cast(mem_ptr, LLVM::Pointer(LLVM::Int8), 'mem_ptr_cast_to_void')
+      result = b.call(@memchr, resized_mem_ptr, NATIVE_ZERO, CodeGen::SIZE_T.from_i(@cell_count))
+      result = b.ptr2int(result, LLVM::Int)
+      mem_ptr_value = b.ptr2int(mem_ptr, LLVM::Int)
+      offset = b.sub result, mem_ptr_value, 'offset_sub'
+      new_value = b.add ptr_value, offset, 'new_value calc'
+      b.store new_value, @ptr
     end
 
     def zero_cell(_node, b)
@@ -279,7 +308,7 @@ module Cbfc
     def current_cell(b, offset: 0)
       current_index = offset_ptr(b, offset: offset)
 
-      b.gep(@memory, [LLVM::Int(0), current_index], 'current_cell')
+      b.inbounds_gep(@memory, [LLVM::Int(0), current_index], 'current_cell')
     end
   end
 end

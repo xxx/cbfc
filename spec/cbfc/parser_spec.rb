@@ -62,6 +62,26 @@ RSpec.describe Cbfc::Parser do
     end
   end
 
+  describe 'scan_left' do
+    it 'parses scan_right operations' do
+      expect(subject.scan_left).to parse('[<]')
+      expect(subject.scan_left).not_to parse('[>]')
+      expect(subject.scan_left).not_to parse('[+]')
+      expect(subject.scan_left).not_to parse('<')
+      expect(subject.scan_left).not_to parse('')
+    end
+  end
+
+  describe 'scan_right' do
+    it 'parses scan_right operations' do
+      expect(subject.scan_right).to parse('[>]')
+      expect(subject.scan_right).not_to parse('[<]')
+      expect(subject.scan_right).not_to parse('[+]')
+      expect(subject.scan_right).not_to parse('>')
+      expect(subject.scan_right).not_to parse('')
+    end
+  end
+
   describe 'zero_cell' do
     it 'parses zero_cell operations' do
       expect(subject.zero_cell).to parse('[-]')

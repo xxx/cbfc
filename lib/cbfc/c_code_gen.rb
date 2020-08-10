@@ -15,21 +15,19 @@ module Cbfc
     # @param cell_count: Number of cells in the memory array. Defaults to 30,000.
     # @param cell_width: Width (in bits) of each cell in the memory array.
     #   8, 16, 32, and 64 are valid values. Any other value results in native ints.
-    #   Defaults to native ints.
+    #   Defaults to 8-bit cells.
     # @param enable_memory_wrap: Whether or not we check for whether the pointer needs to
     #   wrap around when it changes. Setting this to false significantly speeds up
-    #   execution of programs, but can also result in segfaults or undefined behavior
-    #   if the program is liberal with where it tries to access memory. When this is
-    #   set to false, the pointer is started in the middle of the memory array, rather
-    #   than at the traditional 0 index, to help avoid segfaults.
-    #   Defaults to true.
+    #   execution of programs, but can also result in segfaults when compiled with
+    #   optimizations. (Looking at you, Mandelbrot)
+    #   Defaults to false.
     # @return [Cbfc::CCodeGen] a new CCodeGen instance
     def initialize(
       ast,
       io,
       cell_count: CELL_COUNT,
-      cell_width: :native,
-      enable_memory_wrap: true
+      cell_width: 8,
+      enable_memory_wrap: false
     )
       @ast = ast
       @io = io
@@ -96,6 +94,24 @@ module Cbfc
       emit_indented('memory[ptr] = 0;')
     end
 
+    def scan_left(_node)
+      unless @cell_width == 8
+        do_loop(Ast::Loop.new([Ast::DecPtr.new(1)]))
+        return
+      end
+
+      emit_indented('ptr -= (long)((void *)(memory + ptr) - memrchr(memory, 0, ptr + 1));')
+    end
+
+    def scan_right(_node)
+      unless @cell_width == 8
+        do_loop(Ast::Loop.new([Ast::IncPtr.new(1)]))
+        return
+      end
+
+      emit_indented('ptr += (long)(memchr(memory + ptr, 0, sizeof(memory)) - (void *)(memory + ptr));')
+    end
+
     def zero_cell(_node)
       emit_indented('memory[ptr] = 0;')
     end
@@ -114,7 +130,7 @@ module Cbfc
 
     def write_preamble
       offset_ptr = if @enable_memory_wrap
-                     <<~STRING
+                     <<~CODE
                        int offset_ptr(int offset) {
                            if (offset == 0) {
                                return ptr;
@@ -128,43 +144,63 @@ module Cbfc
                            }
                            return new_offset;
                        }
-                     STRING
+                     CODE
                    else
-                     <<~STRING
+                     <<~CODE
                        inline int offset_ptr(int offset) {
                            return ptr + offset;
                        }
-                     STRING
+                     CODE
                    end
 
       filename = @io.respond_to?(:path) ? File.basename(@io.path, '.*') : 'myfile'
 
-      @io.puts <<~STRING.chomp
+      memrchr = if Cbfc::MemrchrChecker::HAS_MEMRCHR
+                  ''
+                else
+                  <<~CODE
+                    /* implementation taken from https://barnowl.mit.edu/browser/compat/memrchr.c */
+                    void *memrchr(const void *s, int c, size_t n) {
+                        int i;
+                        const unsigned char *ss = s;
+                        for (i = n-1; i >= 0; i--) {
+                            if (ss[i] == (unsigned char)c)
+                                return ss + i;
+                        }
+                        return NULL;
+                    }
+                  CODE
+                end
+
+      @io.puts <<~CODE.chomp
         /*
          * translated with cbfc - https://github.com/xxx/cbfc
          *
          * compile with something like "gcc #{filename}.c -o #{filename} -O3"
          */
 
+        #{Cbfc::MemrchrChecker::HAS_MEMRCHR && '#define _GNU_SOURCE'}
         #include <stdio.h>
         #include <stdint.h>
+        #include <string.h>
 
         #define CELL_COUNT #{@cell_count}
 
         int ptr = 0;
         #{@int_type} memory[CELL_COUNT] = {0};
 
+        #{memrchr}
         #{offset_ptr}
 
         int main() {
-      STRING
+      CODE
     end
 
     def write_footer
-      @io.puts <<~STRING.chomp
+      @io.puts <<~CODE.chomp
             return 0;
         }
-      STRING
+      CODE
     end
 
     def emit_indented(str)

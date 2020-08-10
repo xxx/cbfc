@@ -128,13 +128,14 @@ module Cbfc
       end
     end
 
+    class ScanLeft < BfNode; end
+    class ScanRight < BfNode; end
     class ZeroCell < LoopNode; end
 
     class Loop < LoopNode
       attr_accessor :ops
 
       def initialize(ops)
-        # @ops = Cbfc::Optimizer.optimize(ops)
         @ops = ops
       end
 

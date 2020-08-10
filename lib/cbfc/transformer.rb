@@ -10,6 +10,8 @@ module Cbfc
     rule(read_byte: ',') { Ast::ReadByte.new }
 
     rule(zero_cell: simple(:op)) { Ast::ZeroCell.new }
+    rule(scan_right: simple(:op)) { Ast::ScanRight.new }
+    rule(scan_left: simple(:op)) { Ast::ScanLeft.new }
 
     # Use the same node type for both kinds of multiply loops -
     # negative ends up with negative indices

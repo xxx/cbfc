@@ -17,5 +17,14 @@ require 'cbfc/c_code_gen'
 
 module Cbfc
   class Error < StandardError; end
-end
 
+  module MemrchrChecker
+    extend FFI::Library
+    ffi_lib 'c'
+    HAS_MEMRCHR = begin
+                    attach_function(:memrchr, %i[pointer int size_t], :pointer) && true
+                  rescue FFI::NotFoundError
+                    false
+                  end
+  end
+end
