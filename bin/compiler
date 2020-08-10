@@ -60,7 +60,7 @@ if ARGV[1] == 'ast'
 end
 
 # Optimizes the ast in-place
-Cbfc::Optimizer.recursive_optimize!(ast)
+ast.optimize
 
 if ARGV[1] == 'ast-opt'
   pp ast

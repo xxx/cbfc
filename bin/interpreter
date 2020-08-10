@@ -7,6 +7,6 @@ require 'cbfc'
 # Interpret a file through the local pure-Ruby interpreter
 parsed = Cbfc::Parser.parse_file(ARGV[0])
 ast = Cbfc::Transformer.new.apply(parsed)
-Cbfc::Optimizer.recursive_optimize!(ast)
+ast.optimize
 interpreter = Cbfc::Interpreter.new(ast)
 interpreter.eval

@@ -3,20 +3,6 @@
 # some peephole optimizations
 module Cbfc
   class Optimizer
-    # Recursively handles optimizing a full tree
-    # This method updates the AST in-place.
-    def self.recursive_optimize!(ast)
-      return ast unless ast.respond_to?(:ops)
-
-      ast.ops = optimize(ast.ops)
-
-      ast.ops.each do |operation|
-        operation.ops = optimize(operation.ops) if operation.respond_to?(:ops)
-      end
-
-      ast
-    end
-
     # Optimize a single ops list, without recursing into loops
     # Single passes will not change the ops
     def self.optimize(ops)

@@ -7,7 +7,7 @@ require 'cbfc'
 # Interpret a file via LLVM's JIT-enabled interpreter.
 parsed = Cbfc::Parser.parse_file(ARGV[0])
 ast = Cbfc::Transformer.new.apply(parsed)
-Cbfc::Optimizer.recursive_optimize!(ast)
+ast.optimize
 compiler = Cbfc::LlvmCodeGen.new(ast)
 compiler.compile
 compiler.interpret_jit

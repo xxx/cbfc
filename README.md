@@ -38,7 +38,7 @@ interpreter = Cbfc::Interpreter.new(ast)
 interpreter.eval
 
 # Optionally run some peephole optimizations...
-Cfbc::Optimizer.recursive_optimize!(ast)
+ast.optimize
 
 #
 # All Further usages require (in-memory) code generation:

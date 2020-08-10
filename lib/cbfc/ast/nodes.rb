@@ -11,6 +11,10 @@ module Cbfc
       def combine(other)
         [self, other]
       end
+
+      # A hook to allow a node to optimize itself or its children
+      # It's expected that this will update the node in-place.
+      def optimize; end
     end
 
     class CountNode < BfNode
@@ -54,6 +58,26 @@ module Cbfc
         @ops = ops
       end
 
+      def optimize
+        # Remove all loops in the program that occur before
+        # any values are set, as it means all cells are 0.
+        value_set = false
+        @ops = ops.select do |op|
+          next false if op.is_a?(Ast::LoopNode) && !value_set
+
+          case op
+          when Ast::IncVal, Ast::DecVal, Ast::ReadByte
+            value_set = true
+          end
+
+          true
+        end
+
+        @ops = Cbfc::Optimizer.optimize(ops)
+
+        ops.each(&:optimize)
+      end
+
       def to_s
         "#{inspect}#{ops.map(&:inspect)}"
       end
@@ -95,10 +119,14 @@ module Cbfc
     class ReadByte < BfNode; end
 
     class MultiplyLoop < LoopNode
-      attr_reader :offsets
+      attr_reader :offsets, :ops
 
       def initialize(ops)
         @ops = ops
+        generate_offsets
+      end
+
+      def generate_offsets
         @offsets = {}
         index = 0
         multiplier = 0
@@ -137,6 +165,11 @@ module Cbfc
 
       def initialize(ops)
         @ops = ops
+      end
+
+      def optimize
+        @ops = Cbfc::Optimizer.optimize(ops)
+        ops.each(&:optimize)
       end
 
       def to_s
