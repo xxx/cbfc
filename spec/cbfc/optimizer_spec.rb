@@ -55,9 +55,9 @@ RSpec.describe Cbfc::Optimizer do
 
         expect(optimized.map(&:class)).to(
           eq [
-               Cbfc::Ast::DecVal,
-               Cbfc::Ast::IncPtr
-             ]
+            Cbfc::Ast::DecVal,
+            Cbfc::Ast::IncPtr
+          ]
         )
         expect(optimized.map(&:count)).to eq [2, 4]
       end
