@@ -31,12 +31,6 @@ Or install it yourself as:
 ## Usage
 
 ```ruby
-
-
-
-
-
-
 # Create an AST from a file:
 parsed = Cbfc::Parser.parse_file(ARGV[0])
 ast = Cbfc::Transformer.new.apply(parsed)
