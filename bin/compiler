@@ -69,7 +69,7 @@ end
 
 if ARGV[1].match?(/\.c\z/)
   File.open(ARGV[1], 'wb') do |io|
-    compiler = Cbfc::CCodeGen.new(ast, io, cell_width: 8)
+    compiler = Cbfc::CCodeGen.new(ast, io)
     compiler.compile
   end
 
