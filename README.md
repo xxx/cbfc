@@ -37,6 +37,9 @@ ast = Cbfc::Transformer.new.apply(parsed)
 interpreter = Cbfc::Interpreter.new(ast)
 interpreter.eval
 
+# Optionally run some peephole optimizations...
+Cfbc::Optimizer.recursive_optimize!(ast)
+
 #
 # All Further usages require (in-memory) code generation:
 #
@@ -67,7 +70,7 @@ just want to interpret or compile some files, without having to write code.
 
 The cell width and count is configurable on the code generator:  
 `Cbfc::LlvmCodeGen.new(ast, cell_count: 50000, cell_width: 8)`  
-Cell widths of 8, 16, 32, 64, and 128 bits are supported. Native ints are used by default,
+Cell widths of 8, 16, 32, 64, and 128 bits are supported. 8-bit ints are used by default,
 and the cell count defaults to 30,000. 128 bit-widths are not available when generating
 C code with the `Cbfc::CCodeGen` class. 
 
@@ -76,7 +79,8 @@ Memory wrap checking is configuration on the code generator:
 Setting `enable_memory_wrap` to false will disable checking for, and doing, any memory
 wrapping in the program, which can result in a significant performance increase, but
 will lead to undefined behavior and possible segfaults if memory is read or written
-to beyond the ends of the array. `enable_member_wrap` defaults to true.   
+to beyond the ends of the array. This only has occurred when compiled with optimizations.
+`enable_memory_wrap` defaults to false.   
 
 ### /bin scripts
 
@@ -100,7 +104,7 @@ Output filename determines format:
   anything else - emits an executable with that name
 ```
 `compiler` makes a number of assumptions on what and where some things are installed,
-so YMMV with it. It may require some changes to work on your system. It's really just
+so YMMV with it. It may require some massaging to work on your system. It's really just
 an example of how to do various things in one place.
 
 ## Development
