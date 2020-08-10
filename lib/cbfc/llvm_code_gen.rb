@@ -61,6 +61,16 @@ module Cbfc
         function.add_attribute :no_unwind_attribute
       end
 
+      if Cbfc::MemrchrChecker::HAS_MEMRCHR
+        @memrchr = @module.functions.add(
+          'memrchr',
+          [LLVM::Pointer(LLVM::Int8), LLVM::Int, CodeGen::SIZE_T],
+          LLVM::Pointer(LLVM::Int8)
+        ) do |function|
+          function.add_attribute :no_unwind_attribute
+        end
+      end
+
       @ptr = @module.globals.add(LLVM::Int, :ptr) do |var|
         var.initializer = NATIVE_ZERO
         var.linkage = :internal
@@ -201,7 +211,17 @@ module Cbfc
         return
       end
 
-      do_loop(Ast::Loop.new([Ast::DecPtr.new(1)]), b)
+      ptr_value = b.load @ptr, 'scan_left_ptr'
+      zero_ptr = b.inbounds_gep(@memory, [NATIVE_ZERO, NATIVE_ZERO], 'zero_ptr')
+      mem_ptr = b.inbounds_gep(@memory, [NATIVE_ZERO, ptr_value], 'mem_ptr')
+      ptr_plus_one = b.add(ptr_value, LLVM::Int(1))
+      ptr_plus_one = b.sext(ptr_plus_one, CodeGen::SIZE_T)
+      result = b.call(@memrchr, zero_ptr, NATIVE_ZERO, ptr_plus_one)
+      result = b.ptr2int(result, LLVM::Int)
+      mem_ptr_value = b.ptr2int(mem_ptr, LLVM::Int)
+      offset = b.sub mem_ptr_value, result, 'offset_sub'
+      new_value = b.sub ptr_value, offset, 'new_value calc'
+      b.store new_value, @ptr
     end
 
     def scan_right(_node, b)
@@ -213,8 +233,8 @@ module Cbfc
 
       ptr_value = b.load @ptr, 'scan_right_ptr'
       mem_ptr = b.inbounds_gep(@memory, [NATIVE_ZERO, ptr_value], 'mem_ptr')
-      resized_mem_ptr = b.bit_cast(mem_ptr, LLVM::Pointer(LLVM::Int8), 'mem_ptr_cast_to_void')
-      result = b.call(@memchr, resized_mem_ptr, NATIVE_ZERO, CodeGen::SIZE_T.from_i(@cell_count))
+      # resized_mem_ptr = b.bit_cast(mem_ptr, LLVM::Pointer(LLVM::Int8), 'mem_ptr_cast_to_void')
+      result = b.call(@memchr, mem_ptr, NATIVE_ZERO, CodeGen::SIZE_T.from_i(@cell_count))
       result = b.ptr2int(result, LLVM::Int)
       mem_ptr_value = b.ptr2int(mem_ptr, LLVM::Int)
       offset = b.sub result, mem_ptr_value, 'offset_sub'
