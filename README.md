@@ -83,13 +83,13 @@ To compile the LLVM IR or bitcode to a native binary, I've been using the follow
 The gem's `bin` directory has a few scripts in it that might be useful for those who
 just want to interpret or compile some files, without having to write code.
 
-The cell width and count is configurable on the code generator:  
+The cell width and count is configurable on the code generators:  
 `Cbfc::LlvmCodeGen.new(ast, cell_count: 50000, cell_width: 8)`  
 Cell widths of 8, 16, 32, 64, and 128 bits are supported. 8-bit ints are used by default,
 and the cell count defaults to 30,000. 128 bit-widths are not available when generating
 C code with the `Cbfc::CCodeGen` class. 
 
-Memory wrap checking is configuration on the code generator:
+Memory wrap checking is configurable on the code generators:
 `Cbfc::LlvmCodeGen.new(ast, enable_memory_wrap: false)`
 Setting `enable_memory_wrap` to false will disable checking for, and doing, any memory
 wrapping in the program, which can result in a significant performance increase, but
